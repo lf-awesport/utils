@@ -1,4 +1,5 @@
 const puppeteer = require("puppeteer")
+const pool = require("es6-promise-pool")
 
 const formatDate = (date = new Date()) => {
   var d = new Date(date),
@@ -12,29 +13,26 @@ const formatDate = (date = new Date()) => {
   return [year, month, day].join("/")
 }
 
-const scraper = async (date) => {
-  const browser = await puppeteer.launch()
+const scraper = async () => {
+  const browser = await puppeteer.launch({ headless: true })
   const page = await browser.newPage()
+  page.setDefaultNavigationTimeout(0)
 
   await page.goto("https://www.calcioefinanza.it/")
 
   const sel = "article>a"
 
-  await page.evaluate(
-    (sel, date) => {
-      let elements = Array.from(document.querySelectorAll(sel))
-      let articles = elements.map((element) => {
-        return element.href
-      })
-      console.log(articles)
-      const dailyArticles = articles.filter((a) => a.incudes(date))
-      return dailyArticles
-    },
-    sel,
-    date
+  const articles = await page.$$eval(sel, (elements) =>
+    elements.map((element) => element.href)
   )
+  // const date = formatDate()
 
-  console.log(dailyArticles)
+  const date = "2024/07/02"
+
+  const dailyArticles = articles.filter((a) => a.includes(date))
+
+  await page.close()
+  await browser.close()
 }
 
-scraper(formatDate())
+scraper()
