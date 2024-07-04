@@ -31,10 +31,10 @@ const scrapeArticle = async (browser, url) => {
   await saveArticle({ title, excerpt, body, date, url, id, author })
 }
 
-const getArticles = () => axios.get("http://localhost:3000/calciofinanza")
+const getArticles = () => axios.get("http://localhost:3000/sportfinanza")
 
 const saveArticle = ({ title, excerpt, body, date, url, id, author }) =>
-  axios.post("http://localhost:3000/calciofinanza", {
+  axios.post("http://localhost:3000/sportfinanza", {
     title,
     excerpt,
     body,
@@ -56,7 +56,7 @@ const scraper = async () => {
 
   console.log("Articoli presenti: " + db.data.length)
 
-  await page.goto("https://www.calcioefinanza.it/")
+  await page.goto("https://www.sportefinanza.it/")
 
   const articleUrls = await page.$$eval("article>a", (elements) =>
     elements.map((element) => element.href)
