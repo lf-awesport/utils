@@ -16,6 +16,7 @@ const scrapeArticle = async (browser, url) => {
   const title = await page.$eval(".a-title>h1", (element) => element.innerText)
   const date = await page.$eval(".a-date>time", (element) => element.innerText)
   const author = await page.$eval(".author>a", (element) => element.innerText)
+  const imgLink = await page.$eval(".thumb-img", (element) => element.src)
   const excerpt = await page.$eval(
     ".a-excerpt>p",
     (element) => element.innerText
@@ -28,12 +29,21 @@ const scrapeArticle = async (browser, url) => {
 
   await page.close()
 
-  await saveArticle({ title, excerpt, body, date, url, id, author })
+  await saveArticle({ title, excerpt, body, date, url, id, author, imgLink })
 }
 
 const getArticles = () => axios.get("http://localhost:3000/calciofinanza")
 
-const saveArticle = ({ title, excerpt, body, date, url, id, author }) =>
+const saveArticle = ({
+  title,
+  excerpt,
+  body,
+  date,
+  url,
+  id,
+  author,
+  imgLink
+}) =>
   axios.post("http://localhost:3000/calciofinanza", {
     title,
     excerpt,
@@ -41,7 +51,8 @@ const saveArticle = ({ title, excerpt, body, date, url, id, author }) =>
     date,
     url,
     id,
-    author
+    author,
+    imgLink
   })
 
 const scraper = async () => {
