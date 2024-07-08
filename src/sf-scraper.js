@@ -18,7 +18,7 @@ const scrapeArticle = async (browser, url) => {
   const author = await page.$eval(".author>a", (element) => element.innerText)
   const imgLink = await page.$eval(".thumb-img", (element) => element.src)
   const excerpt = await page.$eval(
-    ".a-excerpt>p",
+    ".a-excerpt p",
     (element) => element.innerText
   )
   const body = await page.$$eval(".txt-block>p", (elements) =>
