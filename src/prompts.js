@@ -7,10 +7,10 @@ Additionally for each sentence create a text to be displayed in a super inside h
 Return a json object:
 
 {
-1: {vo, super},
-2: {vo, super},
-3: {vo, super},
-4: {vo, super}
+[{vo, super},
+{vo, super},
+{vo, super},
+{vo, super}]
 }
 `
 
