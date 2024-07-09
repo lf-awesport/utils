@@ -25,5 +25,6 @@ async function translateText(client, text, out) {
 
   return response.translations[0].translatedText
 }
+
 module.exports.initTranslationClient = initTranslationClient
 module.exports.translateText = translateText

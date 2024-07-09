@@ -3,6 +3,7 @@ const Pool = require("es6-promise-pool")
 const axios = require("axios")
 const rng = require("seedrandom")
 const { translateText, initTranslationClient } = require("./translate.js")
+const { summarizeContent } = require("./summarize.js")
 
 let client
 
@@ -37,6 +38,8 @@ const scrapeArticle = async (browser, url) => {
 
     const eng = await translateText(client, body, "en")
 
+    const videoCopy = await summarizeContent(eng)
+
     const id = rng(title)().toString()
 
     await page.close()
@@ -50,7 +53,8 @@ const scrapeArticle = async (browser, url) => {
       id,
       author,
       imgLink,
-      eng
+      eng,
+      videoCopy
     })
   } catch (e) {
     console.log(e)
@@ -96,7 +100,7 @@ const scraper = async () => {
 
   if (newArticles.length > 0) {
     client = initTranslationClient()
-    const pool = new Pool(promiseProducer(browser, newArticles), 3)
+    const pool = new Pool(promiseProducer(browser, newArticles.slice(0, 3)), 3)
     await pool.start()
   }
 
