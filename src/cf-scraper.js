@@ -36,9 +36,9 @@ const scrapeArticle = async (browser, url) => {
       elements.map((e) => e.innerText).join("/n")
     )
 
-    const eng = await translateText(client, body, "en")
+    // const eng = await translateText(client, body, "en")
 
-    const videoCopy = await summarizeContent(eng)
+    const copy = await summarizeContent(body)
 
     const id = rng(title)().toString()
 
@@ -53,8 +53,8 @@ const scrapeArticle = async (browser, url) => {
       id,
       author,
       imgLink,
-      eng,
-      videoCopy
+      // eng,
+      copy
     })
   } catch (e) {
     console.log(e)
