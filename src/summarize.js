@@ -6,7 +6,7 @@ const vertex_ai = new VertexAI({
   project: "useful-ward-428507-a0",
   location: "us-central1"
 })
-const model = "gemini-1.5-flash-001"
+const model = "gemini-1.5-pro-001"
 
 // Instantiate the models
 const generativeModel = vertex_ai.preview.getGenerativeModel({
