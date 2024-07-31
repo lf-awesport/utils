@@ -61,10 +61,10 @@ const scrapeArticle = async (browser, url) => {
   }
 }
 
-const getArticles = () => axios.get("http://localhost:3000/calciofinanza")
+const getArticles = () => axios.get("http://localhost:8000/calciofinanza")
 
 const saveArticle = (articleData) =>
-  axios.post("http://localhost:3000/calciofinanza", articleData)
+  axios.post("http://localhost:8000/calciofinanza", articleData)
 
 const scraper = async () => {
   const browser = await puppeteer.launch({ headless: true })
