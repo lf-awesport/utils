@@ -38,6 +38,8 @@ const scrapeArticle = async (browser, url) => {
 
     // const eng = await translateText(client, body, "en")
 
+    if (body.includes("FPeX")) return
+
     const copy = await summarizeContent(body)
 
     const id = rng(title)().toString()
@@ -100,7 +102,7 @@ const scraper = async () => {
 
   if (newArticles.length > 0) {
     client = initTranslationClient()
-    const pool = new Pool(promiseProducer(browser, newArticles.slice(0, 3)), 3)
+    const pool = new Pool(promiseProducer(browser, newArticles.slice(0, 10)), 3)
     await pool.start()
   }
 
