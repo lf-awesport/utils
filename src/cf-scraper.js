@@ -22,10 +22,7 @@ const scrapeArticle = async (browser, url) => {
       ".a-title>h1",
       (element) => element.innerText
     )
-    const date = await page.$eval(
-      ".a-date>time",
-      (element) => element.innerText
-    )
+    const date = await page.$eval(".a-date>time", (element) => element.dateTime)
     const author = await page.$eval(".author>a", (element) => element.innerText)
     const imgLink = await page.$eval(".thumb-img", (element) => element.src)
     const excerpt = await page.$eval(
@@ -40,7 +37,7 @@ const scrapeArticle = async (browser, url) => {
 
     if (body.includes("FPeX")) return
 
-    const copy = await summarizeContent(body)
+    // const copy = await summarizeContent(body)
 
     const id = rng(title)().toString()
 
@@ -54,9 +51,9 @@ const scrapeArticle = async (browser, url) => {
       url,
       id,
       author,
-      imgLink,
+      imgLink
       // eng,
-      copy
+      // copy
     })
   } catch (e) {
     console.log(e)
@@ -102,7 +99,7 @@ const scraper = async () => {
 
   if (newArticles.length > 0) {
     client = initTranslationClient()
-    const pool = new Pool(promiseProducer(browser, newArticles.slice(0, 10)), 3)
+    const pool = new Pool(promiseProducer(browser, newArticles), 3)
     await pool.start()
   }
 
