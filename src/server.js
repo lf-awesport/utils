@@ -2,8 +2,12 @@ const puppeteer = require("puppeteer")
 const express = require("express")
 const PDFDocument = require("pdfkit")
 const fs = require("fs")
+const axios = require("axios")
+const { summarizeContent } = require("./summarize.js")
+const cors = require("cors")
 
 const app = express()
+app.use(cors())
 
 app.get("/screenshot", async (req, res) => {
   const browser = await puppeteer.launch()
@@ -41,6 +45,25 @@ app.get("/screenshot", async (req, res) => {
   // doc.pipe(fs.createWriteStream("file.pdf"))
   doc.end()
   await browser.close()
+})
+
+app.get("/getCarousel", async (req, res) => {
+  const postId = req.query.id
+  let carousel
+  try {
+    carousel = await axios.get(`http://localhost:8000/carousels/${postId}`)
+  } catch (error) {
+    const text = await axios.get(
+      `http://localhost:8000/calciofinanza/${postId}`
+    )
+    carousel = await summarizeContent(text.data.body)
+    axios.post(`http://localhost:8000/carousels`, {
+      id: postId,
+      carousel
+    })
+    carousel = await axios.get(`http://localhost:8000/carousels/${postId}`)
+  }
+  res.json(carousel.data)
 })
 
 app.listen(4000)

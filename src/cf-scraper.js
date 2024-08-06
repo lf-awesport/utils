@@ -3,7 +3,6 @@ const Pool = require("es6-promise-pool")
 const axios = require("axios")
 const rng = require("seedrandom")
 const { translateText, initTranslationClient } = require("./translate.js")
-const { summarizeContent } = require("./summarize.js")
 
 let client
 

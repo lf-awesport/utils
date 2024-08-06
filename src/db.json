@@ -1,4 +1,177 @@
 {
+  "carousels": [
+    {
+      "id": "0.20662765411613981",
+      "carousel": [
+        {
+          "headline": "Oltre la Competizione: la Salute degli Atleti al Primo Posto",
+          "content": "La vicenda di Angela Carini e Imane Khelif alle Olimpiadi di Parigi pone l'accento su un tema cruciale: la salute degli atleti.  Indipendentemente dal verdetto del ring, la sicurezza e il benessere fisico devono essere prioritari. Come possiamo garantire un ambiente sportivo che tuteli gli atleti senza compromettere l'integrità della competizione? Approfondisci il tema con AWE Sport Education."
+        },
+        {
+          "headline": "Sport Governance: la Sfida dell'Inclusione e delle Regole",
+          "content": "Il caso Khelif evidenzia le complessità della governance sportiva, in particolare nell'elaborare regolamenti che siano al contempo inclusivi e equi.  Come bilanciare il diritto di partecipazione con la parità di condizioni competitive? Esplora le diverse prospettive e le possibili soluzioni con i nostri corsi su Sport Governance."
+        },
+        {
+          "headline": "Sport ed Etica: un Dibattito Aperto",
+          "content": "La vicenda di Parigi solleva interrogativi etici profondi sul futuro dello sport.  Quali sono i limiti dell'inclusione? Come gestire situazioni complesse che mettono in discussione i principi fondamentali dello sport?  AWE Sport Education ti offre gli strumenti per analizzare e comprendere le sfide etiche nello sport contemporaneo."
+        },
+        {
+          "headline": "Il Ruolo dei Media nello Sport: tra Informazione e Sensazionalismo",
+          "content": "La copertura mediatica del caso Carini-Khelif ci ricorda l'influenza dei media nel plasmare la percezione pubblica dello sport. Come promuovere un giornalismo sportivo responsabile ed equilibrato? Scoprilo con i nostri corsi dedicati al rapporto tra sport e media."
+        },
+        {
+          "headline": "AWE Sport Education: il tuo Partner per una Visione a 360° sullo Sport",
+          "content": "Seguici per rimanere aggiornato sulle ultime notizie e analisi dal mondo dello sport. AWE Sport Education: il tuo punto di riferimento per una formazione completa e di alto livello nel settore sportivo. Visita il nostro sito web per scoprire di più sui nostri corsi."
+        }
+      ]
+    },
+    {
+      "id": "0.20662765411613981",
+      "carousel": [
+        {
+          "headline": "Oltre la Polemica: Gestire la Pressione nel Caos",
+          "content": "Il caso Carini-Khelif alle Olimpiadi ci ricorda quanto la pressione mediatica e le controversie esterne possano influenzare gli atleti e le loro performance. Come Sport Manager, saper gestire situazioni di crisi e proteggere il benessere mentale dei propri atleti è cruciale. "
+        },
+        {
+          "headline": "Sport Governance: La Sfida dell'Inclusione e delle Regole",
+          "content": "L'ammissione di Khelif alle Olimpiadi dopo la squalifica ai Mondiali solleva interrogativi cruciali sulla Sport Governance. Come bilanciare inclusione e fairness? Qual è il ruolo delle federazioni sportive nella definizione di criteri chiari e trasparenti?"
+        },
+        {
+          "headline": "Etica nello Sport: Oltre la Vittoria a Tutti i Costi",
+          "content": "La decisione di Carini di ritirarsi, seppur dolorosa, apre un dibattito sull'etica sportiva. La salute e il benessere dell'atleta vengono prima di tutto? Come promuovere una cultura sportiva che valorizzi l'integrità e il rispetto dell'avversario?"
+        },
+        {
+          "headline": "Il Ruolo del Manager: Supporto a 360°",
+          "content": "Dalle controversie etiche alla gestione della pressione mediatica, il ruolo dello Sport Manager è sempre più complesso. AWE Sport Education fornisce le competenze necessarie per affrontare le sfide del settore, offrendo formazione a 360°: dalla Sport Governance alla gestione della comunicazione."
+        },
+        {
+          "headline": "Approfondisci le tue Conoscenze con AWE Sport Education",
+          "content": "Segui AWE Sport Education per rimanere aggiornato sulle ultime notizie e approfondire le tue conoscenze nel campo dello Sport Management.  Preparati ad affrontare le sfide di un settore in continua evoluzione."
+        }
+      ]
+    },
+    {
+      "id": "0.20662765411613981",
+      "carousel": [
+        {
+          "headline": "Ritiro Strategico o Questione di Etica Sportiva?",
+          "content": "Angela Carini si ritira dopo pochi secondi contro Imane Khelif alle Olimpiadi. Un caso che riapre il dibattito sull'inclusione e le regole nel pugilato femminile. Cosa significa gestire atleti in contesti complessi e mediatici come questo?"
+        },
+        {
+          "headline": "Sport Governance: La Sfida dell'Equilibrio",
+          "content": "Il caso Carini-Khelif evidenzia la complessità della governance sportiva. Come bilanciare inclusione e fairness?  Approfondisci il tema con il nostro corso su AWE Sport Education. [link al corso]"
+        },
+        {
+          "headline": "Gestire la Pressione: L'Impatto sui Media",
+          "content": "Dichiarazioni a caldo, lacrime e polemiche: come gestire la comunicazione in situazioni delicate? Scopri le strategie per una comunicazione efficace nel mondo dello sport. [link al corso]"
+        },
+        {
+          "headline": "Oltre il Ring: Il Ruolo del Mental Coaching",
+          "content": "Carini parla di dolore fisico ed emotivo. Il mental coaching è fondamentale per preparare gli atleti non solo alla competizione, ma anche a gestire la pressione mediatica.  [link al corso]"
+        },
+        {
+          "headline": "AWE Sport Education: Il Tuo Partner per l'Eccellenza",
+          "content": "Rimani aggiornato sulle ultime notizie e approfondimenti dal mondo dello sport management. Segui AWE Sport Education.  [link al profilo]"
+        }
+      ]
+    },
+    {
+      "id": "0.20662765411613981",
+      "carousel": [
+        {
+          "headline": "Oltre la Competizione: la Decisione di Angela Carini e il Dibattito sull'Inclusione nello Sport",
+          "content": "La recente decisione di Angela Carini di ritirarsi dal match contro Imane Khelif alle Olimpiadi di Parigi ha acceso i riflettori su un tema complesso: l'inclusione nello sport. Come possono le organizzazioni sportive bilanciare equità competitiva e partecipazione inclusiva?"
+        },
+        {
+          "headline": "Sport Governance: la Sfida di Regolamenti Inclusivi ed Equi",
+          "content": "Il caso di Khelif, inizialmente squalificata dai Mondiali 2023 per poi essere ammessa alle Olimpiadi, evidenzia le difficoltà nel definire regolamenti chiari e condivisi.  La Sport Governance è chiamata a un continuo aggiornamento per garantire un ambiente sportivo equo e rispettoso per tutti gli atleti."
+        },
+        {
+          "headline": "Sport Law: Diritti degli Atleti e Regolamenti Internazionali",
+          "content": "La vicenda di Carini e Khelif solleva importanti questioni di Sport Law. Quali sono i diritti e le tutele degli atleti in situazioni controverse? Come possono i regolamenti internazionali adattarsi all'evolversi della società e della scienza?"
+        },
+        {
+          "headline": "Sport for Good: Promuovere l'Inclusione e Superare le Barriere",
+          "content": "Lo sport ha il potere di abbattere barriere e promuovere l'inclusione.  Il caso di Khelif ci ricorda l'importanza di creare un ambiente sportivo accogliente e rispettoso per tutti, indipendentemente dal genere, dall'identità o dalle capacità fisiche."
+        },
+        {
+          "headline": "AWE Sport Education: Approfondisci le Tue Conoscenze nel Mondo dello Sport",
+          "content": "Rimani aggiornato sulle ultime notizie e analisi del settore sportivo con AWE Sport Education. Segui la nostra pagina per contenuti esclusivi e approfondimenti su Sport Governance, Sport Law, Sport for Good e molto altro.  #AWESportEducation #SportManagement #SportIndustry"
+        }
+      ]
+    },
+    {
+      "id": "0.5047876513240346",
+      "carousel": [
+        {
+          "headline": "Oltre il Gol: Emirates e la Strategia di Sponsorizzazione a Lungo Termine",
+          "content": "La FA Cup e Emirates prolungano la loro partnership fino al 2028, dimostrando il valore strategico degli accordi a lungo termine nello sport. Ma cosa significa per entrambe le parti?"
+        },
+        {
+          "headline": "Il Valore del Brand: Emirates sul Palcoscenico Globale",
+          "content": "Con questo rinnovo, Emirates rafforza la propria presenza nel mondo del calcio, associandosi a una competizione storica e seguita a livello globale. Un caso studio di successo nel panorama dello Sport Marketing."
+        },
+        {
+          "headline": "Oltre la Visibilità: Attivazione e Coinvolgimento dei Fan",
+          "content": "Emirates non si limita alla mera esposizione del brand, ma punta sull'attivazione della sponsorizzazione attraverso esperienze dedicate ai fan e la promozione della FA Cup in nuovi mercati. Un esempio di come massimizzare il ritorno sull'investimento (ROI) in ambito Sponsorship."
+        },
+        {
+          "headline": "Adattabilità: Il Nuovo Accordo e l'Importanza della Flessibilità",
+          "content": "La riduzione degli introiti per la FA, dovuta all'eliminazione dei replay, evidenzia l'importanza della flessibilità negli accordi di sponsorizzazione.  AWE Sport Education esplora le nuove dinamiche del mercato e fornisce gli strumenti per negoziare accordi sostenibili e vantaggiosi per tutte le parti."
+        },
+        {
+          "headline": "Vuoi diventare un esperto di Sport Marketing e Sponsorship?",
+          "content": "Scopri i corsi di AWE Sport Education e inizia il tuo percorso di crescita professionale. Segui AWE Sport Education per rimanere aggiornato sul mondo dello sport business."
+        }
+      ]
+    },
+    {
+      "id": "0.3592221490170374",
+      "carousel": [
+        {
+          "headline": "Governance Sportiva: Chi Guida il Cavallino Rampante?",
+          "content": "La Ferrari ha recentemente reso noti gli stipendi dei suoi dirigenti, offrendo uno spaccato affascinante sulla governance di un colosso sportivo. Questo esempio ci permette di approfondire temi chiave come la struttura organizzativa, la trasparenza e il ruolo dei consigli di amministrazione nello sport professionistico."
+        },
+        {
+          "headline": "Oltre il Volante: L'Impatto Finanziario del Leadership",
+          "content": "Con un compenso totale di quasi 10 milioni di euro per il board, la Ferrari dimostra come la leadership, anche al di fuori della pista, abbia un peso significativo. Questo dato offre l'opportunità di analizzare i modelli di remunerazione nel settore sportivo, valutando l'equilibrio tra investimenti in talenti dirigenziali e ritorno economico."
+        },
+        {
+          "headline": "Dalla Pista al Bilancio: I Fringe Benefit nel Mondo dello Sport",
+          "content": "L'assegnazione di fringe benefit, come l'auto aziendale, a figure chiave come Elkann e Vigna, è una pratica comune nel mondo dello sport business. Questo caso ci permette di esplorare il tema dei pacchetti retributivi, analizzando come le aziende attraggono e premiano i migliori talenti in un mercato competitivo."
+        },
+        {
+          "headline": "Sport e Performance: Remunerazione Variabile e Incentivi a Lungo Termine",
+          "content": "La struttura della remunerazione dei dirigenti Ferrari, con una componente variabile legata al raggiungimento di obiettivi, riflette l'importanza della performance anche a livello manageriale. Questo esempio ci permette di approfondire il tema degli incentivi nello sport, valutando l'efficacia di diversi modelli per motivare il raggiungimento di risultati."
+        },
+        {
+          "headline": "AWE Sport Education: Guida il Tuo Successo nel Business dello Sport",
+          "content": "Vuoi approfondire le tue conoscenze in Sport Governance, Marketing, Finanza e altri settori cruciali? Segui AWE Sport Education e diventa un leader nel mondo dello sport. Visita il nostro sito web o contattaci per scoprire di più sui nostri corsi e programmi."
+        }
+      ]
+    },
+    {
+      "id": "0.060647430125827274",
+      "carousel": [
+        {
+          "headline": "Oltre il campo: la gestione finanziaria del Barcellona",
+          "content": "Il Barcellona, nonostante la mancata vittoria della Liga, si prepara ad affrontare gli ottavi di Champions League contro il Napoli, in una stagione di cambiamenti anche a livello finanziario. Dopo aver adottato una politica di contenimento dei costi, il club blaugrana ha chiuso il bilancio 2022/23 con un attivo record. Questo ci offre l'opportunità di analizzare come la gestione finanziaria influenzi le performance sportive."
+        },
+        {
+          "headline": "Dalle leve al Fair Play Finanziario: le sfide del modello Barça",
+          "content": "Per far fronte alle restrizioni del Fair Play Finanziario in Liga, il Barcellona ha dovuto rivedere la propria strategia finanziaria. Dopo aver beneficiato delle leve economiche negli anni precedenti, il club ha optato per cessioni importanti come Dembelé, Kessié e Griezmann, liberando spazio salariale e generando entrate significative. Questo esempio dimostra l'importanza di un'attenta pianificazione finanziaria nel rispetto delle normative."
+        },
+        {
+          "headline": "Bilanciare presente e futuro: il mercato oculato del Barcellona",
+          "content": "Nonostante le cessioni, il Barcellona ha investito nel futuro con l'acquisto del giovane talento Vitor Roque. L'arrivo a parametro zero di Gundogan e Martinez, insieme ai prestiti di Cancelo e Joao Felix, dimostrano la capacità del club di attrarre giocatori di alto livello anche in un'ottica di contenimento dei costi. Un caso di studio interessante per analizzare le strategie di mercato nel mondo del calcio moderno."
+        },
+        {
+          "headline": "Vuoi approfondire le dinamiche del business sportivo?",
+          "content": "Scopri i corsi di AWE Sport Education e ottieni gli strumenti per diventare un professionista del settore. Visita il nostro sito web o seguici sui nostri canali social per rimanere aggiornato sulle nostre iniziative formative."
+        }
+      ]
+    }
+  ],
   "calciofinanza": [
     {
       "id": "0.20662765411613981",
