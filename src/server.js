@@ -59,7 +59,9 @@ app.get("/getCarousel", async (req, res) => {
     carousel = await summarizeContent(text.data.body)
     axios.post(`http://localhost:8000/carousels`, {
       id: postId,
-      carousel
+      carousel,
+      url: text.data.url,
+      title: text.data.title
     })
     carousel = await axios.get(`http://localhost:8000/carousels/${postId}`)
   }
