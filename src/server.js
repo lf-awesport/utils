@@ -1,7 +1,6 @@
 const puppeteer = require("puppeteer")
 const express = require("express")
 const PDFDocument = require("pdfkit")
-const fs = require("fs")
 const axios = require("axios")
 const { summarizeContent } = require("./summarize.js")
 const cors = require("cors")
@@ -13,7 +12,7 @@ app.get("/screenshot", async (req, res) => {
   const browser = await puppeteer.launch()
   const page = await browser.newPage()
   await page.setViewport({ width: 1980, height: 1980, deviceScaleFactor: 2 })
-  await page.goto(req.query.url) // URL is given by the "user" (your client-side application)
+  await page.goto(`http://localhost:3000/post/${req.query.id}`)
   await page.waitForSelector("#carousel")
 
   var doc = new PDFDocument({
@@ -42,7 +41,6 @@ app.get("/screenshot", async (req, res) => {
   )
 
   doc.pipe(res)
-  // doc.pipe(fs.createWriteStream("file.pdf"))
   doc.end()
   await browser.close()
 })
