@@ -3,7 +3,7 @@ const Pool = require("es6-promise-pool")
 const axios = require("axios")
 const rng = require("seedrandom")
 const _ = require("lodash")
-const { translateText, initTranslationClient } = require("./translate.js")
+// const { translateText, initTranslationClient } = require("./translate.js")
 
 let traslationClient
 
@@ -33,7 +33,7 @@ const scrapeArticle = async (browser, url) => {
       elements.map((e) => e.innerText).join("/n")
     )
 
-    if (body.includes("FPeX")) return
+    if (body.includes("FPeX") || body.includes("Exchange")) return
 
     // const eng = await translateText(client, body, "en")
 
@@ -68,6 +68,8 @@ const scraper = async () => {
   page.setDefaultNavigationTimeout(0)
 
   let newArticles = []
+  let articleUrls = []
+  let articleTitles = []
 
   const db = await getArticles()
   const dbIds = db.data.map((e) => e.id)
@@ -76,12 +78,25 @@ const scraper = async () => {
 
   await page.goto("https://www.calcioefinanza.it/")
 
-  const articleUrls = await page.$$eval("article>a", (elements) =>
+  const articleUrlsCF = await page.$$eval("article>a", (elements) =>
     elements.map((element) => element.href)
   )
-  const articleTitles = await page.$$eval(".post-title", (elements) =>
+  const articleTitlesCF = await page.$$eval(".post-title", (elements) =>
     elements.map((element) => element.innerText)
   )
+
+  await page.goto("https://www.sportefinanza.it/")
+
+  const articleUrlsSF = await page.$$eval("article>a", (elements) =>
+    elements.map((element) => element.href)
+  )
+  const articleTitlesSF = await page.$$eval(".post-title", (elements) =>
+    elements.map((element) => element.innerText)
+  )
+
+  articleUrls = articleUrlsCF.concat(articleUrlsSF)
+  articleTitles = articleTitlesCF.concat(articleTitlesSF)
+
   const articleIds = articleTitles.map((e) => rng(e)().toString())
 
   for (let i = 0; i < articleIds.length; i++) {
