@@ -2,9 +2,10 @@ const puppeteer = require("puppeteer")
 const Pool = require("es6-promise-pool")
 const axios = require("axios")
 const rng = require("seedrandom")
+const _ = require("lodash")
 const { translateText, initTranslationClient } = require("./translate.js")
 
-let client
+let traslationClient
 
 const promiseProducer = (browser, urls) => () => {
   const url = urls.pop()
@@ -32,11 +33,9 @@ const scrapeArticle = async (browser, url) => {
       elements.map((e) => e.innerText).join("/n")
     )
 
-    // const eng = await translateText(client, body, "en")
-
     if (body.includes("FPeX")) return
 
-    // const copy = await summarizeContent(body)
+    // const eng = await translateText(client, body, "en")
 
     const id = rng(title)().toString()
 
@@ -51,8 +50,7 @@ const scrapeArticle = async (browser, url) => {
       id,
       author,
       imgLink
-      // eng,
-      // copy
+      // eng
     })
   } catch (e) {
     console.log(e)
@@ -97,7 +95,7 @@ const scraper = async () => {
   await page.close()
 
   if (newArticles.length > 0) {
-    client = initTranslationClient()
+    // traslationClient = initTranslationClient()
     const pool = new Pool(promiseProducer(browser, newArticles), 3)
     await pool.start()
   }

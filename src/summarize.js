@@ -12,9 +12,9 @@ const model = "gemini-1.5-pro-001"
 const generativeModel = vertex_ai.preview.getGenerativeModel({
   model: model,
   generationConfig: {
-    maxOutputTokens: 600,
-    temperature: 0.2,
-    topP: 0.8
+    maxOutputTokens: 8192,
+    temperature: 0,
+    topP: 0
   },
   safetySettings: [
     {
