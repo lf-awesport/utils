@@ -1,12 +1,13 @@
 const { VertexAI } = require("@google-cloud/vertexai")
 const { summarizePrompt } = require("./prompts")
+require("dotenv").config({ path: require("find-config")(".env") })
 
 // Initialize Vertex with your Cloud project and location
 const vertex_ai = new VertexAI({
-  project: "useful-ward-428507-a0",
-  location: "us-central1"
+  project: process.env.PROJECT_ID,
+  location: process.env.LOCATION
 })
-const model = "gemini-1.5-pro-001"
+const model = process.env.MODEL
 
 // Instantiate the models
 const generativeModel = vertex_ai.preview.getGenerativeModel({
