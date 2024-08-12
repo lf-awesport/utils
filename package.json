@@ -7,6 +7,7 @@
     "prettier-eslint": "^16.3.0"
   },
   "dependencies": {
+    "@firebase/firestore": "^4.6.5",
     "@google-cloud/text-to-speech": "^5.3.0",
     "@google-cloud/translate": "^8.3.0",
     "@google-cloud/vertexai": "^1.4.0",
@@ -16,6 +17,7 @@
     "es6-promise-pool": "^2.5.0",
     "express": "^4.19.2",
     "find-config": "^1.0.0",
+    "firebase": "^10.12.5",
     "json-server": "^1.0.0-beta.1",
     "pdfkit": "^0.15.0",
     "puppeteer": "^22.15.0",

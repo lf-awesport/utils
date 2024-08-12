@@ -1,9 +1,10 @@
 const puppeteer = require("puppeteer")
 const express = require("express")
 const PDFDocument = require("pdfkit")
-const axios = require("axios")
 const { summarizeContent } = require("./summarize.js")
 const cors = require("cors")
+const { doc, setDoc, getDoc } = require("firebase/firestore")
+const { firebaseApp } = require("./firebase.js")
 
 const app = express()
 app.use(cors())
@@ -51,21 +52,23 @@ app.get("/getCarousel", async (req, res) => {
   const postId = req.query.id
   let carousel
   try {
-    carousel = await axios.get(`http://localhost:8000/carousels/${postId}`)
-  } catch (error) {
-    const text = await axios.get(
-      `http://localhost:8000/calciofinanza/${postId}`
-    )
-    carousel = await summarizeContent(text.data.body)
-    axios.post(`http://localhost:8000/carousels`, {
-      id: postId,
-      carousel,
-      url: text.data.url,
-      title: text.data.title
-    })
-    carousel = await axios.get(`http://localhost:8000/carousels/${postId}`)
-  }
-  res.json(carousel.data)
+    carousel = await getDoc(doc(firebaseApp, "carousels", postId))
+    if (!carousel.data()) {
+      const postSnapshot = await getDoc(
+        doc(firebaseApp, "calciofinanza", postId)
+      )
+      const post = postSnapshot.data()
+      carousel = await summarizeContent(post.body)
+      await setDoc(doc(firebaseApp, "carousels", postId), {
+        id: postId,
+        carousel,
+        url: post.url,
+        title: post.title
+      })
+      carousel = await getDoc(doc(firebaseApp, "carousels", postId))
+    }
+  } catch (error) {}
+  res.json(carousel.data())
 })
 
 app.listen(4000)
