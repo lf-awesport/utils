@@ -1,11 +1,13 @@
 const puppeteer = require("puppeteer")
 const Pool = require("es6-promise-pool")
-const axios = require("axios")
 const rng = require("seedrandom")
 const _ = require("lodash")
+const { collection, doc, setDoc, getDocs } = require("firebase/firestore")
+const { firebaseApp } = require("./firebase.js")
+
 // const { translateText, initTranslationClient } = require("./translate.js")
 
-let traslationClient
+// let traslationClient
 
 const promiseProducer = (browser, urls) => () => {
   const url = urls.pop()
@@ -41,26 +43,25 @@ const scrapeArticle = async (browser, url) => {
 
     await page.close()
 
-    await saveArticle({
-      title,
-      excerpt,
-      body,
-      date,
-      url,
-      id,
-      author,
-      imgLink
-      // eng
-    })
+    await setDoc(
+      doc(firebaseApp, "calciofinanza", id),
+      {
+        title,
+        excerpt,
+        body,
+        date,
+        url,
+        id,
+        author,
+        imgLink
+        // eng
+      },
+      { merge: true }
+    )
   } catch (e) {
     console.log(e)
   }
 }
-
-const getArticles = () => axios.get("http://localhost:8000/calciofinanza")
-
-const saveArticle = (articleData) =>
-  axios.post("http://localhost:8000/calciofinanza", articleData)
 
 const scraper = async () => {
   const browser = await puppeteer.launch({ headless: true })
@@ -70,11 +71,15 @@ const scraper = async () => {
   let newArticles = []
   let articleUrls = []
   let articleTitles = []
+  let dbIds = []
 
-  const db = await getArticles()
-  const dbIds = db.data.map((e) => e.id)
+  const dbSnapshot = await getDocs(collection(firebaseApp, "calciofinanza"))
+  dbSnapshot.forEach((doc) => {
+    // console.log(doc.id, " => ", doc.data())
+    dbIds.push(doc.id)
+  })
 
-  console.log("Articoli presenti: " + db.data.length)
+  console.log("Articoli salvati: " + dbIds.length)
 
   await page.goto("https://www.calcioefinanza.it/")
 
@@ -105,7 +110,7 @@ const scraper = async () => {
     }
   }
 
-  console.log("Nuovi articoli trovati: " + newArticles.length)
+  console.log("Nuovi articoli trovati: " + newArticles)
 
   await page.close()
 
