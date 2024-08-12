@@ -25,7 +25,7 @@ const scrapeArticle = async (browser, url) => {
       (element) => element.innerText
     )
     const date = await page.$eval(".a-date>time", (element) => element.dateTime)
-    const author = await page.$eval(".author>a", (element) => element.innerText)
+    const author = "Sport & Finanza"
     const imgLink = await page.$eval(".thumb-img", (element) => element.src)
     const excerpt = await page.$eval(
       ".a-excerpt p",
@@ -44,7 +44,7 @@ const scrapeArticle = async (browser, url) => {
     await page.close()
 
     await setDoc(
-      doc(firebaseApp, "calciofinanza", id),
+      doc(firebaseApp, "posts", id),
       {
         title,
         excerpt,
@@ -73,9 +73,8 @@ const scraper = async () => {
   let articleTitles = []
   let dbIds = []
 
-  const dbSnapshot = await getDocs(collection(firebaseApp, "calciofinanza"))
+  const dbSnapshot = await getDocs(collection(firebaseApp, "posts"))
   dbSnapshot.forEach((doc) => {
-    // console.log(doc.id, " => ", doc.data())
     dbIds.push(doc.id)
   })
 
@@ -110,7 +109,7 @@ const scraper = async () => {
     }
   }
 
-  console.log("Nuovi articoli trovati: " + newArticles)
+  console.log("Nuovi articoli trovati: " + newArticles.length)
 
   await page.close()
 

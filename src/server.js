@@ -54,9 +54,7 @@ app.get("/getCarousel", async (req, res) => {
   try {
     carousel = await getDoc(doc(firebaseApp, "carousels", postId))
     if (!carousel.data()) {
-      const postSnapshot = await getDoc(
-        doc(firebaseApp, "calciofinanza", postId)
-      )
+      const postSnapshot = await getDoc(doc(firebaseApp, "posts", postId))
       const post = postSnapshot.data()
       carousel = await summarizeContent(post.body)
       await setDoc(doc(firebaseApp, "carousels", postId), {
