@@ -57,6 +57,7 @@ app.get("/getCarousel", async (req, res) => {
       const postSnapshot = await getDoc(doc(firebaseApp, "posts", postId))
       const post = postSnapshot.data()
       carousel = await summarizeContent(post.body)
+      console.log("here", carousel)
       await setDoc(doc(firebaseApp, "carousels", postId), {
         id: postId,
         carousel,

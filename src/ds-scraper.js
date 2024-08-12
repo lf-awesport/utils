@@ -52,8 +52,8 @@ const scrapeArticle = async (browser, url) => {
       ".sottotitolo",
       (element) => element.innerText
     )
-    const body = await page.$$eval("#articolo", (elements) =>
-      elements.map((e) => e.innerText)
+    const body = await page.$$eval("#articolo  p", (elements) =>
+      elements.map((e) => e.innerText).join("/n")
     )
 
     await page.close()
