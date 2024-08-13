@@ -25,36 +25,46 @@ const scrapeArticle = async (browser, url) => {
     await page.goto(url)
 
     const title = await page.$eval(
-      ".titolodettaglio>h1",
+      ".article-title",
       (element) => element.innerText
     )
-    const date = await page.$eval(".testatadata-mob", (element) => {
-      const dateArray = element.outerText
-        .split("DEL")
-        .pop()
-        .split(" ")[0]
-        .split("/")
+    const date = await page.$eval(".article-datetime", (element) => {
+      const dateArray = element.outerText.split(" ")
+
+      const getMonth = {
+        Gennaio: 1,
+        Febbraio: 2,
+        Marzo: 3,
+        Aprile: 4,
+        Maggio: 5,
+        Giugno: 6,
+        Luglio: 7,
+        Agosto: 8,
+        Settembre: 9,
+        Ottobre: 10,
+        Novembre: 11,
+        Dicembre: 12
+      }
 
       return JSON.stringify(
         new Date(
           parseInt(dateArray[2]),
-          parseInt(dateArray[1]) - 1,
+          getMonth[dateArray[1]] - 1,
           parseInt(dateArray[0]) + 1
         )
       ).replace(/['"]+/g, "")
     })
 
-    const author = "Diritto & Sport"
-    const imgLink = await page.$eval(".imgleft", (element) => element.src)
+    const author = "Rivista Undici"
+    const imgLink = await page.$eval(".wp-post-image", (element) => element.src)
     const excerpt = await page.$eval(
-      ".sottotitolo",
+      ".article-summary",
       (element) => element.innerText
     )
-    const body = await page.$$eval("#articolo  p", (elements) =>
+    const body = await page.$$eval(".article-content >  p", (elements) =>
       elements.map((e) => e.innerText).join("/n")
     )
 
-    await page.close()
     // const eng = await translateText(client, body, "en")
 
     const id = rng(title)().toString()
@@ -74,12 +84,13 @@ const scrapeArticle = async (browser, url) => {
       },
       { merge: true }
     )
+    await page.close()
   } catch (e) {
     console.log(e)
   }
 }
 
-const scrapeUrls = async (browser, currentPage, endPage) => {
+const scrapeUrls = async (browser, category, currentPage, endPage) => {
   try {
     if (currentPage !== endPage) {
       currentPage = currentPage + 1
@@ -88,14 +99,15 @@ const scrapeUrls = async (browser, currentPage, endPage) => {
       page.setDefaultNavigationTimeout(0)
 
       await page.goto(
-        `https://www.italiaoggi.it/ultime-notizie/diritto-e-sport-01801/${currentPage}`
+        `https://www.rivistaundici.com/category/${category}/page/${currentPage}`
       )
 
-      const currentUrls = await page.$$eval("section>h3>a", (elements) =>
+      const currentUrls = await page.$$eval(".article-title", (elements) =>
         elements.map((element) => element.href)
       )
-      const currentTitles = await page.$$eval("section>h3>a", (elements) =>
-        elements.map((element) => element.innerText)
+      const currentTitles = await page.$$eval(
+        ".article-title > span",
+        (elements) => elements.map((element) => element.innerText)
       )
 
       await page.close()
@@ -107,7 +119,8 @@ const scrapeUrls = async (browser, currentPage, endPage) => {
           newUrls.push(currentUrls[i])
         }
       }
-      return scrapeUrls(browser, currentPage, endPage)
+
+      return scrapeUrls(browser, category, currentPage, endPage)
     }
   } catch (err) {
     console.log(err)
@@ -124,7 +137,11 @@ const scraper = async () => {
 
   console.log("Articoli salvati: " + dbIds.length)
 
-  await scrapeUrls(browser, 0, 10)
+  await scrapeUrls(browser, "media", 0, 10)
+  await scrapeUrls(browser, "lifestyle", 0, 10)
+  await scrapeUrls(browser, "altri-sport", 0, 10)
+  await scrapeUrls(browser, "calcio-internazionale", 0, 10)
+  await scrapeUrls(browser, "serie-a", 0, 10)
 
   console.log("Nuovi articoli trovati: " + newUrls.length)
 
