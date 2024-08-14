@@ -2,9 +2,20 @@ const puppeteer = require("puppeteer")
 const express = require("express")
 const PDFDocument = require("pdfkit")
 const { summarizeContent } = require("./summarize.js")
+const { summarizePrompt, dailySummaryPrompt } = require("./prompts")
+const { cfScraper } = require("./cf-scraper.js")
+const { dsScraper } = require("./ds-scraper.js")
+const { ruScraper } = require("./ru-scraper.js")
 const cors = require("cors")
-const { doc, setDoc, getDoc } = require("firebase/firestore")
+const {
+  doc,
+  setDoc,
+  getDoc,
+  getDocs,
+  collection
+} = require("firebase/firestore")
 const { firebaseApp } = require("./firebase.js")
+const rng = require("seedrandom")
 
 const app = express()
 app.use(cors())
@@ -56,8 +67,7 @@ app.get("/getCarousel", async (req, res) => {
     if (!carousel.data()) {
       const postSnapshot = await getDoc(doc(firebaseApp, "posts", postId))
       const post = postSnapshot.data()
-      carousel = await summarizeContent(post.body)
-      console.log("here", carousel)
+      carousel = await summarizeContent(post.body, summarizePrompt)
       await setDoc(doc(firebaseApp, "carousels", postId), {
         id: postId,
         carousel,
@@ -66,8 +76,53 @@ app.get("/getCarousel", async (req, res) => {
       })
       carousel = await getDoc(doc(firebaseApp, "carousels", postId))
     }
-  } catch (error) {}
+  } catch (error) {
+    console.log(error)
+  }
   res.json(carousel.data())
+})
+
+// app.get("/getDailySummary", async (req, res) => {
+//   const date = req.query.date
+//   const dateId = rng(date)().toString()
+//   let dailySummary
+//   try {
+//     dailySummary = await getDoc(doc(firebaseApp, "daily", dateId))
+//     if (!dailySummary.data()) {
+//       let body = "Daily news of " + date
+//       let urls
+//       const snapshot = await getDocs(collection(firebaseApp, "posts"))
+//       snapshot.forEach((doc) => {
+//         if (doc.data().date.includes(date)) {
+//           body = body.concat(doc.data().body)
+//         }
+//       })
+//       dailySummary = await summarizeContent(body, dailySummaryPrompt)
+//       console.log(dailySummary)
+
+//       await setDoc(doc(firebaseApp, "daily", dateId), {
+//         id: dateId,
+//         body: dailySummary,
+//         urls,
+//         title: `Daily Summary ${date}`
+//       })
+//       dailySummary = await getDoc(doc(firebaseApp, "daily", dateId))
+//     }
+//   } catch (error) {
+//     console.log(error)
+//   }
+//   // res.json(dailySummary.data())
+// })
+
+app.get("/scrapePosts", async (req, res) => {
+  try {
+    await cfScraper()
+    await dsScraper()
+    await ruScraper()
+  } catch (error) {
+    console.log(error)
+  }
+  res.status(200)
 })
 
 app.listen(4000)

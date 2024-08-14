@@ -75,7 +75,7 @@ const scrapeArticle = async (browser, url) => {
         title,
         excerpt,
         body,
-        date,
+        date: date.split("T")[0],
         url,
         id,
         author,
@@ -127,7 +127,7 @@ const scrapeUrls = async (browser, category, currentPage, endPage) => {
   }
 }
 
-const scraper = async () => {
+const ruScraper = async () => {
   const browser = await puppeteer.launch({ headless: true })
 
   const dbSnapshot = await getDocs(collection(firebaseApp, "posts"))
@@ -154,4 +154,4 @@ const scraper = async () => {
   await browser.close()
 }
 
-scraper()
+module.exports.ruScraper = ruScraper

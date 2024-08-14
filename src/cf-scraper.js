@@ -49,7 +49,7 @@ const scrapeArticle = async (browser, url) => {
         title,
         excerpt,
         body,
-        date,
+        date: date.split("T")[0],
         url,
         id,
         author,
@@ -63,7 +63,7 @@ const scrapeArticle = async (browser, url) => {
   }
 }
 
-const scraper = async () => {
+const cfScraper = async () => {
   const browser = await puppeteer.launch({ headless: true })
   const page = await browser.newPage()
   page.setDefaultNavigationTimeout(0)
@@ -122,4 +122,4 @@ const scraper = async () => {
   await browser.close()
 }
 
-scraper()
+module.exports.cfScraper = cfScraper
