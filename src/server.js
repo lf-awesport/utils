@@ -15,9 +15,6 @@ const {
   collection,
   query,
   where
-  collection,
-  query,
-  where
 } = require("firebase/firestore")
 const { firebaseApp } = require("./firebase.js")
 
