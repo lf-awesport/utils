@@ -86,42 +86,42 @@ app.get("/getCarousel", async (req, res) => {
   return res.json(carousel.data())
 })
 
-app.get("/getSummary", async (req, res) => {
-  const date = req.query.ids
-  const summaryId = rng(date)().toString()
-  let urls = []
-  let dailySummary
-  try {
-    dailySummary = await getDoc(doc(firebaseApp, "daily", dateId))
-    if (!dailySummary.data()) {
-      let body = "Daily news of " + date
-      const dailyQuery = query(
-        collection(firebaseApp, "posts"),
-        where("date", "==", date)
-      )
-      const snapshot = await getDocs(dailyQuery)
-      snapshot.forEach((doc) => {
-        if (doc.data().date.includes(date)) {
-          body = body.concat(doc.data().body)
-          urls.push(doc.id)
-        }
-      })
-      dailySummary = await summarizeContent(body, dailySummaryPrompt)
+// app.get("/getSummary", async (req, res) => {
+//   const date = req.query.ids
+//   const summaryId = rng(date)().toString()
+//   let urls = []
+//   let dailySummary
+//   try {
+//     dailySummary = await getDoc(doc(firebaseApp, "daily", dateId))
+//     if (!dailySummary.data()) {
+//       let body = "Daily news of " + date
+//       const dailyQuery = query(
+//         collection(firebaseApp, "posts"),
+//         where("date", "==", date)
+//       )
+//       const snapshot = await getDocs(dailyQuery)
+//       snapshot.forEach((doc) => {
+//         if (doc.data().date.includes(date)) {
+//           body = body.concat(doc.data().body)
+//           urls.push(doc.id)
+//         }
+//       })
+//       dailySummary = await summarizeContent(body, dailySummaryPrompt)
 
-      await setDoc(doc(firebaseApp, "daily", dateId), {
-        id: dateId,
-        body: dailySummary,
-        urls,
-        date,
-        title: `Daily Summary ${date}`
-      })
-      dailySummary = await getDoc(doc(firebaseApp, "daily", dateId))
-    }
-  } catch (error) {
-    console.log(error)
-  }
-  return res.json(dailySummary.data())
-})
+//       await setDoc(doc(firebaseApp, "daily", dateId), {
+//         id: dateId,
+//         body: dailySummary,
+//         urls,
+//         date,
+//         title: `Daily Summary ${date}`
+//       })
+//       dailySummary = await getDoc(doc(firebaseApp, "daily", dateId))
+//     }
+//   } catch (error) {
+//     console.log(error)
+//   }
+//   return res.json(dailySummary.data())
+// })
 
 app.get("/scrapePosts", async (req, res) => {
   try {
