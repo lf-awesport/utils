@@ -12,7 +12,9 @@ const {
   setDoc,
   getDoc,
   getDocs,
-  collection
+  collection,
+  query,
+  where
 } = require("firebase/firestore")
 const { firebaseApp } = require("./firebase.js")
 const rng = require("seedrandom")
@@ -82,37 +84,44 @@ app.get("/getCarousel", async (req, res) => {
   res.json(carousel.data())
 })
 
-// app.get("/getDailySummary", async (req, res) => {
-//   const date = req.query.date
-//   const dateId = rng(date)().toString()
-//   let dailySummary
-//   try {
-//     dailySummary = await getDoc(doc(firebaseApp, "daily", dateId))
-//     if (!dailySummary.data()) {
-//       let body = "Daily news of " + date
-//       let urls
-//       const snapshot = await getDocs(collection(firebaseApp, "posts"))
-//       snapshot.forEach((doc) => {
-//         if (doc.data().date.includes(date)) {
-//           body = body.concat(doc.data().body)
-//         }
-//       })
-//       dailySummary = await summarizeContent(body, dailySummaryPrompt)
-//       console.log(dailySummary)
+app.get("/getDailySummary", async (req, res) => {
+  const date = req.query.date
+  let urls = []
+  let dailySummary
+  try {
+    dailySummary = await getDoc(doc(firebaseApp, "daily", date))
+    if (!dailySummary.data()) {
+      let body = "Daily news of " + date
+      const dailyQuery = query(
+        collection(firebaseApp, "posts"),
+        where("date", "==", date)
+      )
+      const snapshot = await getDocs(dailyQuery)
+      snapshot.forEach((doc) => {
+        if (doc.data().date.includes(date)) {
+          body = body.concat(doc.data().body)
+          urls.push(doc.id)
+        }
+      })
+      if (urls.length > 0) {
+        dailySummary = await summarizeContent(body, dailySummaryPrompt)
 
-//       await setDoc(doc(firebaseApp, "daily", dateId), {
-//         id: dateId,
-//         body: dailySummary,
-//         urls,
-//         title: `Daily Summary ${date}`
-//       })
-//       dailySummary = await getDoc(doc(firebaseApp, "daily", dateId))
-//     }
-//   } catch (error) {
-//     console.log(error)
-//   }
-//   // res.json(dailySummary.data())
-// })
+        await setDoc(doc(firebaseApp, "daily", date), {
+          id: date,
+          body: dailySummary,
+          urls,
+          title: `Daily Summary ${date}`
+        })
+        dailySummary = await getDoc(doc(firebaseApp, "daily", date))
+      }
+    }
+  } catch (error) {
+    console.log(error)
+  }
+  if (dailySummary.data()) {
+    return res.json(dailySummary.data())
+  } else return res.json({ body: { content: "Not Found", title: "404" } })
+})
 
 app.get("/scrapePosts", async (req, res) => {
   try {
