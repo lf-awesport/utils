@@ -12,7 +12,9 @@ const {
   setDoc,
   getDoc,
   getDocs,
-  collection
+  collection,
+  query,
+  where
 } = require("firebase/firestore")
 const { firebaseApp } = require("./firebase.js")
 const rng = require("seedrandom")
@@ -57,6 +59,8 @@ app.get("/screenshot", async (req, res) => {
   doc.pipe(res)
   doc.end()
   await browser.close()
+
+  return
 })
 
 app.get("/getCarousel", async (req, res) => {
@@ -79,40 +83,45 @@ app.get("/getCarousel", async (req, res) => {
   } catch (error) {
     console.log(error)
   }
-  res.json(carousel.data())
+  return res.json(carousel.data())
 })
 
-// app.get("/getDailySummary", async (req, res) => {
-//   const date = req.query.date
-//   const dateId = rng(date)().toString()
-//   let dailySummary
-//   try {
-//     dailySummary = await getDoc(doc(firebaseApp, "daily", dateId))
-//     if (!dailySummary.data()) {
-//       let body = "Daily news of " + date
-//       let urls
-//       const snapshot = await getDocs(collection(firebaseApp, "posts"))
-//       snapshot.forEach((doc) => {
-//         if (doc.data().date.includes(date)) {
-//           body = body.concat(doc.data().body)
-//         }
-//       })
-//       dailySummary = await summarizeContent(body, dailySummaryPrompt)
-//       console.log(dailySummary)
+app.get("/getDailySummary", async (req, res) => {
+  const date = req.query.date
+  const dateId = rng(date)().toString()
+  let urls = []
+  let dailySummary
+  try {
+    dailySummary = await getDoc(doc(firebaseApp, "daily", dateId))
+    if (!dailySummary.data()) {
+      let body = "Daily news of " + date
+      const dailyQuery = query(
+        collection(firebaseApp, "posts"),
+        where("date", "==", date)
+      )
+      const snapshot = await getDocs(dailyQuery)
+      snapshot.forEach((doc) => {
+        if (doc.data().date.includes(date)) {
+          body = body.concat(doc.data().body)
+          urls.push(doc.id)
+        }
+      })
+      dailySummary = await summarizeContent(body, dailySummaryPrompt)
 
-//       await setDoc(doc(firebaseApp, "daily", dateId), {
-//         id: dateId,
-//         body: dailySummary,
-//         urls,
-//         title: `Daily Summary ${date}`
-//       })
-//       dailySummary = await getDoc(doc(firebaseApp, "daily", dateId))
-//     }
-//   } catch (error) {
-//     console.log(error)
-//   }
-//   // res.json(dailySummary.data())
-// })
+      await setDoc(doc(firebaseApp, "daily", dateId), {
+        id: dateId,
+        body: dailySummary,
+        urls,
+        date,
+        title: `Daily Summary ${date}`
+      })
+      dailySummary = await getDoc(doc(firebaseApp, "daily", dateId))
+    }
+  } catch (error) {
+    console.log(error)
+  }
+  return res.json(dailySummary.data())
+})
 
 app.get("/scrapePosts", async (req, res) => {
   try {
@@ -122,7 +131,7 @@ app.get("/scrapePosts", async (req, res) => {
   } catch (error) {
     console.log(error)
   }
-  res.status(200)
+  return res.status(200)
 })
 
 app.listen(4000)
