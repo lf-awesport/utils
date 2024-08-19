@@ -15,9 +15,11 @@ const {
   collection,
   query,
   where
+  collection,
+  query,
+  where
 } = require("firebase/firestore")
 const { firebaseApp } = require("./firebase.js")
-const rng = require("seedrandom")
 
 const app = express()
 app.use(cors())
@@ -59,6 +61,8 @@ app.get("/screenshot", async (req, res) => {
   doc.pipe(res)
   doc.end()
   await browser.close()
+
+  return
 })
 
 app.get("/getCarousel", async (req, res) => {
@@ -81,7 +85,7 @@ app.get("/getCarousel", async (req, res) => {
   } catch (error) {
     console.log(error)
   }
-  res.json(carousel.data())
+  return res.json(carousel.data())
 })
 
 app.get("/getDailySummary", async (req, res) => {
@@ -131,7 +135,7 @@ app.get("/scrapePosts", async (req, res) => {
   } catch (error) {
     console.log(error)
   }
-  res.status(200)
+  return res.status(200)
 })
 
 app.listen(4000)
