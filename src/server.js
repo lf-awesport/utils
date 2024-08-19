@@ -86,9 +86,9 @@ app.get("/getCarousel", async (req, res) => {
   return res.json(carousel.data())
 })
 
-app.get("/getDailySummary", async (req, res) => {
-  const date = req.query.date
-  const dateId = rng(date)().toString()
+app.get("/getSummary", async (req, res) => {
+  const date = req.query.ids
+  const summaryId = rng(date)().toString()
   let urls = []
   let dailySummary
   try {
