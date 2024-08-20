@@ -88,6 +88,7 @@ app.get("/getCarousel", async (req, res) => {
 app.get("/getDailySummary", async (req, res) => {
   const date = req.query.date
   let urls = []
+  let ids = []
   let dailySummary
   try {
     dailySummary = await getDoc(doc(firebaseApp, "daily", date))
@@ -101,7 +102,8 @@ app.get("/getDailySummary", async (req, res) => {
       snapshot.forEach((doc) => {
         if (doc.data().date.includes(date)) {
           body = body.concat(doc.data().body)
-          urls.push(doc.id)
+          urls.push(doc.data().url)
+          ids.push(doc.id)
         }
       })
       if (urls.length > 0) {
@@ -111,6 +113,7 @@ app.get("/getDailySummary", async (req, res) => {
           id: date,
           body: dailySummary,
           urls,
+          ids,
           title: `Daily Summary ${date}`
         })
         dailySummary = await getDoc(doc(firebaseApp, "daily", date))
