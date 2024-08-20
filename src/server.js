@@ -124,7 +124,9 @@ app.get("/getDailySummary", async (req, res) => {
   }
   if (dailySummary.data()) {
     return res.json(dailySummary.data())
-  } else return res.json({ body: { content: "Not Found", title: "404" } })
+  } else {
+    res.json()
+  }
 })
 
 app.get("/scrapePosts", async (req, res) => {
