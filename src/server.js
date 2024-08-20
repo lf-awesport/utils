@@ -58,8 +58,6 @@ app.get("/screenshot", async (req, res) => {
   doc.pipe(res)
   doc.end()
   await browser.close()
-
-  return
 })
 
 app.get("/getCarousel", async (req, res) => {
@@ -82,7 +80,8 @@ app.get("/getCarousel", async (req, res) => {
   } catch (error) {
     console.log(error)
   }
-  return res.json(carousel.data())
+  res.json(carousel.data())
+  res.end()
 })
 
 app.get("/getDailySummary", async (req, res) => {
@@ -126,6 +125,7 @@ app.get("/getDailySummary", async (req, res) => {
     return res.json(dailySummary.data())
   } else {
     res.json()
+    res.end()
   }
 })
 
@@ -137,7 +137,8 @@ app.get("/scrapePosts", async (req, res) => {
   } catch (error) {
     console.log(error)
   }
-  return res.status(200)
+  res.status(200)
+  res.end()
 })
 
 app.listen(4000)
