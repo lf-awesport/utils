@@ -170,4 +170,28 @@ app.get("/getSentimentAnalysis", async (req, res) => {
   res.end()
 })
 
+app.get("/getWordCloud", async (req, res) => {
+  const postId = req.query.id
+  let text
+  try {
+    text = await getDoc(doc(firebaseApp, "wordcloud", postId))
+    if (!text.data()) {
+      const postSnapshot = await getDoc(doc(firebaseApp, "posts", postId))
+      const post = postSnapshot.data()
+      text = await summarizeContent(post.body, cleanTextPrompt)
+      await setDoc(doc(firebaseApp, "wordcloud", postId), {
+        id: postId,
+        text,
+        url: post.url,
+        title: post.title
+      })
+      text = await getDoc(doc(firebaseApp, "wordcloud", postId))
+    }
+  } catch (error) {
+    console.log(error)
+  }
+  res.json(text.data())
+  res.end()
+})
+
 app.listen(4000)

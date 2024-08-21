@@ -63,6 +63,8 @@ async function summarizeContent(content, prompt) {
     .split("```json")[1]
     .split("```")[0]
 
+  console.log
+
   return JSON.parse(rawSummary)
 }
 

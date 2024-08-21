@@ -105,22 +105,25 @@ module.exports.dailySummaryPrompt = dailySummaryPrompt
 
 const sentimentAnalysisPrompt = `Please analyze the following text and provide a sentiment analysis. For each of the emotions: joy, sadness, fear, and anger, assign a value between 0 and 100 that represents the intensity of that emotion in the text. Ensure that the total sum of these values equals 100.
 
-Response Format in JSON in italiano:
-Gioia: {percentuale: X%, spiegazione: explanation}
-Tristezza: {percentuale: X%, spiegazione: explanation}
-Paura: {percentuale: X%, spiegazione: explanation}
-Rabbia: {percentuale: X%, spiegazione: explanation}
-Ensure the sum of these values is 100%. 
-Escape any quotes and special characters
+Return a valid json object: 
+Gioia: {percentuale: X, spiegazione: explanation}
+Tristezza: {percentuale: X, spiegazione: explanation}
+Paura: {percentuale: X, spiegazione: explanation}
+Rabbia: {percentuale: X, spiegazione: explanation}
+
+Ensure the sum of these values is 100% and there are no other emotions in the response.
+Escape any quotes and special characters.
+Output in Italian.
 `
 
 module.exports.sentimentAnalysisPrompt = sentimentAnalysisPrompt
 
-const cleanTextPrompt = `Please analyze the following text and remove all prepositions, articles, conjunctions, and other common stop words (like "the," "and," "of," "in," etc.). Retain only the most meaningful and important words that convey the key information. The cleaned text should be suitable for generating a word cloud that highlights the primary topics and themes.
+const cleanTextPrompt = `Please analyze the following text and remove all prepositions, articles, quotes, special caracters,conjunctions, words that are used only once and other common stop words (like "the," "and," "of," "in," etc.). Retain only the most meaningful and important words that convey the key information. The cleaned text should be suitable for generating a word cloud that highlights the primary topics and themes.
 Text:
 "[Insert text here]"
 Response Format In JSON in italian:
-Cleaned Text: [The text with only important words.] 
+Return a valid json object: 
+[The text with only important and relevant words.] 
 Escape any quotes and special characters
 `
 
