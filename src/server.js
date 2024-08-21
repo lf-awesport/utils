@@ -2,7 +2,12 @@ const puppeteer = require("puppeteer")
 const express = require("express")
 const PDFDocument = require("pdfkit")
 const { summarizeContent } = require("./summarize.js")
-const { summarizePrompt, dailySummaryPrompt } = require("./prompts")
+const {
+  summarizePrompt,
+  dailySummaryPrompt,
+  sentimentAnalysisPrompt,
+  cleanTextPrompt
+} = require("./prompts")
 const { cfScraper } = require("./cf-scraper.js")
 const { dsScraper } = require("./ds-scraper.js")
 const { ruScraper } = require("./ru-scraper.js")
@@ -138,6 +143,30 @@ app.get("/scrapePosts", async (req, res) => {
     console.log(error)
   }
   res.status(200)
+  res.end()
+})
+
+app.get("/getSentimentAnalysis", async (req, res) => {
+  const postId = req.query.id
+  let analysis
+  try {
+    analysis = await getDoc(doc(firebaseApp, "sentiment", postId))
+    if (!analysis.data()) {
+      const postSnapshot = await getDoc(doc(firebaseApp, "posts", postId))
+      const post = postSnapshot.data()
+      analysis = await summarizeContent(post.body, sentimentAnalysisPrompt)
+      await setDoc(doc(firebaseApp, "sentiment", postId), {
+        id: postId,
+        analysis,
+        url: post.url,
+        title: post.title
+      })
+      analysis = await getDoc(doc(firebaseApp, "sentiment", postId))
+    }
+  } catch (error) {
+    console.log(error)
+  }
+  res.json(analysis.data())
   res.end()
 })
 

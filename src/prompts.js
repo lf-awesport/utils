@@ -102,3 +102,24 @@ Return a valid json object:
 `
 
 module.exports.dailySummaryPrompt = dailySummaryPrompt
+
+const sentimentAnalysisPrompt = `Please analyze the following text and provide a sentiment analysis. For each of the emotions: joy, sadness, fear, and anger, assign a value between 0 and 100 that represents the intensity of that emotion in the text. Ensure that the total sum of these values equals 100.
+
+Response Format in JSON in italiano:
+Gioia: {X%,  explanation}
+Tristezza: {X%,  explanation}
+Paura: {X%,  explanation}
+Rabbia: {X%,  explanation}
+Ensure the sum of these values is 100%.  
+`
+
+module.exports.sentimentAnalysisPrompt = sentimentAnalysisPrompt
+
+const cleanTextPrompt = `Please analyze the following text and remove all prepositions, articles, conjunctions, and other common stop words (like "the," "and," "of," "in," etc.). Retain only the most meaningful and important words that convey the key information. The cleaned text should be suitable for generating a word cloud that highlights the primary topics and themes.
+Text:
+"[Insert text here]"
+Response Format In JSON in italian:
+Cleaned Text: [The text with only important words.] 
+`
+
+module.exports.cleanTextPrompt = cleanTextPrompt
