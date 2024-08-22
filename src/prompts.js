@@ -123,7 +123,7 @@ Text:
 "[Insert text here]"
 Response Format In JSON in italian:
 Return a valid json object: 
-[The text with only important and relevant words.] 
+{ text: The text with only important and relevant words.  }
 Escape any quotes and special characters
 `
 

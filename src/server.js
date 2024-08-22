@@ -29,6 +29,7 @@ app.use(cors())
 app.get("/screenshot", async (req, res) => {
   const browser = await puppeteer.launch()
   const page = await browser.newPage()
+  page.setDefaultNavigationTimeout(0)
   await page.setViewport({ width: 1980, height: 1980, deviceScaleFactor: 2 })
   await page.goto(`http://localhost:3000/post/${req.query.id}`, {
     waitUntil: "networkidle0"
