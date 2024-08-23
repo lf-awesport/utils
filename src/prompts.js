@@ -103,17 +103,58 @@ Return a valid json object:
 
 module.exports.dailySummaryPrompt = dailySummaryPrompt
 
-const sentimentAnalysisPrompt = `Please analyze the following text and provide a sentiment analysis. For each of the emotions: joy, sadness, fear, and anger, assign a value between 0 and 100 that represents the intensity of that emotion in the text. Ensure that the total sum of these values equals 100.
+const sentimentAnalysisPrompt = `Please analyze the following text and provide a detailed JSON response that includes the following aspects:
+Readability Analysis: Determine the readability level of the text, using metrics such as the Flesch-Kincaid score or other readability indices.
+Tone and Style Analysis: Analyze the tone and writing style of the article, categorizing it as formal, informal, persuasive, neutral, etc.
+Cohesion and Coherence Analysis: Evaluate the logical flow and connectedness of ideas within the article. Indicate whether the article is well-structured and easy to follow.
+Bias Detection: Identify any potential bias present in the article, such as political bias or agenda-driven content. Indicate the type and degree of bias detected.
+Emotion Detection: Identify the specific emotions conveyed in the article, such as joy, sadness, anger, fear, etc., and provide their intensity levels.
+Argument Structure Analysis: Break down and analyze the structure of arguments presented in the article. Indicate the strength of the reasoning and whether the arguments are logically sound.
 
-Return a valid json object: 
-Gioia: {percentuale: X, spiegazione: explanation}
-Tristezza: {percentuale: X, spiegazione: explanation}
-Paura: {percentuale: X, spiegazione: explanation}
-Rabbia: {percentuale: X, spiegazione: explanation}
-
-Ensure the sum of these values is 100% and there are no other emotions in the response.
-Escape any quotes and special characters.
-Output in Italian.
+Formato di Risposta:
+json
+Copia codice
+{
+  "analisi_leggibilità": {
+    "punteggio_flesch_kincaid": [valore],
+    "livello_di_grado": [valore],
+    "tempo_di_lettura_minuti": [valore],
+    "spiegazione": "[Dettagli sull'analisi della leggibilità e su come i punteggi sono stati determinati.]"
+  },
+  "analisi_tono_stile": {
+    "tono": "[formale/informale/persuasivo/neutrale/ecc.]",
+    "stile": "[descrittivo/narrativo/espositivo/ecc.]",
+    "spiegazione": "[Dettagli sull'analisi del tono e dello stile, inclusi i criteri usati per la classificazione.]"
+  },
+  "analisi_coesione_coerenza": {
+    "punteggio_coerenza": [valore],
+    "struttura": "[ben strutturato/da migliorare/ecc.]",
+    "flusso": "[logico/illogico/ecc.]",
+    "spiegazione": "[Dettagli sull'analisi della coesione e coerenza, e su come sono stati valutati il flusso e la struttura dell'articolo.]"
+  },
+  "rilevazione_di_pregiudizio": {
+    "tipo_di_pregiudizio": "[politico/culturale/ecc.]",
+    "grado_di_pregiudizio": "[nessuno/basso/moderato/alto]",
+    "spiegazione": "[Dettagli sulla rilevazione del pregiudizio, con una spiegazione del tipo e del grado di pregiudizio identificato.]"
+  },
+  "rilevazione_emozioni": {
+    "emozioni": {
+      "gioia": [percentuale],
+      "tristezza": [percentuale],
+      "rabbia": [percentuale],
+      "paura": [percentuale],
+      "sorpresa": [percentuale]
+    },
+    "spiegazione": "[Dettagli sulla rilevazione delle emozioni e sulle percentuali associate a ciascuna emozione.]"
+  },
+  "analisi_struttura_argomentativa": {
+    "forza_argomentativa": "[forte/moderata/debole]",
+    "fallacie_logiche": "[nessuna/ad_hominem/falsa_dicotomia/ecc.]",
+    "validità_conclusione": "[valida/non valida]",
+    "spiegazione": "[Dettagli sull'analisi della struttura argomentativa, inclusa la forza delle argomentazioni e l'identificazione di eventuali fallacie logiche.]"
+  }
+}
+output a JSON in italian
 `
 
 module.exports.sentimentAnalysisPrompt = sentimentAnalysisPrompt

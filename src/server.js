@@ -138,8 +138,8 @@ app.get("/getDailySummary", async (req, res) => {
 app.get("/scrapePosts", async (req, res) => {
   try {
     await cfScraper()
-    await dsScraper()
     await ruScraper()
+    await dsScraper()
   } catch (error) {
     console.log(error)
   }

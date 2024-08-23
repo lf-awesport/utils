@@ -19,10 +19,12 @@ const promiseProducer = (browser, urls) => () => {
 }
 
 const scrapeArticle = async (browser, url) => {
+  const page = await browser.newPage()
   try {
-    const page = await browser.newPage()
     page.setDefaultNavigationTimeout(0)
     await page.goto(url)
+
+    const imgLink = await page.$eval(".imgleft", (element) => element.src)
 
     const title = await page.$eval(
       ".titolodettaglio>h1",
@@ -45,7 +47,6 @@ const scrapeArticle = async (browser, url) => {
     })
 
     const author = "Diritto & Sport"
-    const imgLink = await page.$eval(".imgleft", (element) => element.src)
     const excerpt = await page.$eval(
       ".sottotitolo",
       (element) => element.innerText
@@ -69,13 +70,14 @@ const scrapeArticle = async (browser, url) => {
         url,
         id,
         author,
-        imgLink
+        imgLink:
+          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQpI6WrclD8SPcet1PS9_aAFZSAZM0Bpoms4Q&s"
         // eng
       },
       { merge: true }
     )
   } catch (e) {
-    console.log(e)
+    console.log("error" + url)
   }
 }
 
@@ -111,6 +113,7 @@ const scrapeUrls = async (browser, currentPage, endPage) => {
     }
   } catch (err) {
     console.log(err)
+    await page.close()
   }
 }
 

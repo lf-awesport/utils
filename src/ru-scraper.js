@@ -19,10 +19,10 @@ const promiseProducer = (browser, urls) => () => {
 }
 
 const scrapeArticle = async (browser, url) => {
+  const page = await browser.newPage()
   try {
-    const page = await browser.newPage()
     page.setDefaultNavigationTimeout(0)
-    await page.goto(url)
+    await page.goto(url, { waitUntil: "networkidle0" })
 
     const title = await page.$eval(
       ".article-title",
@@ -87,6 +87,7 @@ const scrapeArticle = async (browser, url) => {
     await page.close()
   } catch (e) {
     console.log(e)
+    await page.close()
   }
 }
 
