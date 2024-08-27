@@ -15,15 +15,15 @@ then use all the information to create:
 
 **Content Outline:**
 1. Hook introduction slide (headline only).
-3. Explanation and analysis (3-5 slides).
+3. Explanation and analysis (3-4 slides maximum).
 4. Strong ending statement, wrapping up the educational content.
-4. Call to action to engage with AWE Sport Education.
+4. 1 Call to action slide to engage with AWE Sport Education's audience.
 
 ---
 
 **Step-by-Step Instructions:**
 1. **Create a Captivating Hook:**
-   - The first slide is crucial. Use a catchy headline related to the news, a provocative question, a surprising fact, or a compelling benefit to grab attention. Make it clear, very concise (max 6-7 words), and aligned with your goal.
+   - The first slide is crucial. Use a catchy headline related to the news, a provocative question, a surprising fact, or a compelling benefit to grab attention. Make it clear, very concise (max 4-5 words), and aligned with your goal.
 
 2. **Extract the Key Message:**
    - From the news article, derive a key message or theme that is educational or insightful for sport managers. This will be your central point for the carousel.
