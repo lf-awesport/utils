@@ -23,7 +23,7 @@ then use all the information to create:
 
 **Step-by-Step Instructions:**
 1. **Create a Captivating Hook:**
-   - The first slide is crucial. Use a catchy headline related to the news, a provocative question, a surprising fact, or a compelling benefit to grab attention. Make it clear, concise, and aligned with your goal.
+   - The first slide is crucial. Use a catchy headline related to the news, a provocative question, a surprising fact, or a compelling benefit to grab attention. Make it clear, very concise (max 6-7 words), and aligned with your goal.
 
 2. **Extract the Key Message:**
    - From the news article, derive a key message or theme that is educational or insightful for sport managers. This will be your central point for the carousel.
@@ -173,58 +173,56 @@ Escape any quotes and special characters
 
 module.exports.cleanTextPrompt = cleanTextPrompt
 
-const highlightPrompt = `Objective: You are an expert in content optimization, tasked with enhancing the readability and impact of a slide by identifying key words or sentences to highlight. The goal is to make the slide content more engaging and easier to understand.
+const highlightPrompt = `Objective: You are an expert in content optimization, responsible for enhancing the readability and impact of a slide by identifying key words or short phrases to highlight. Your goal is to make the slide content more engaging and easier to understand, emphasizing the most critical information.
 
 Instructions:
 
-Analyze Content:
+Analyze the Content:
 
-For each slide in the array provided:
-
-Review the provided slide content carefully. Focus on identifying the most important words, short phrases, or short sentences that convey the core message.
+Carefully review the provided slide content. Identify the most crucial words, short phrases, or concise sentences that convey the core message of the slide.
 Highlight Selection Criteria:
 
-Key Concepts: Identify any terms or short phrases that are central to the slide's message.
-Actionable Points: Highlight actionable advice or steps that the audience should remember.
-Important Data: If the slide contains any data, figures, or statistics, highlight the most impactful numbers or facts.
-Keywords: Focus on industry-specific terminology, names, or jargon that should stand out to the reader.
-Transition Words: Don't Highlight any words or short phrases that guide the flow of the content, such as "therefore," "however," or "in conclusion."
+Core Concepts: Select terms or short phrases that are central to the slide's primary message or theme.
+Actionable Advice: Highlight any actionable advice, steps, or recommendations that the audience should remember.
+Critical Data: If the slide includes data, figures, or statistics, highlight the most impactful numbers or facts that reinforce the message.
+Industry-Specific Keywords: Focus on highlighting industry-specific terms, names, or jargon that should stand out to the reader.
+Exclusions: Do not highlight transition words, filler phrases, or any language that simply guides the flow of content without adding substantive meaning (e.g., "therefore," "however," "in conclusion").
 Limit the Highlights:
 
-Select a limited number of words or sentences (max 3) to avoid overwhelming the slide. Focus on the most impactful choices that will improve the overall comprehension and visual hierarchy of the text.
-If no keywords are found for a slide return an empty array.
-Return a JSON Array:
+Choose a limited number of words, short phrases, or concise sentences (up to 4 words each) to avoid overwhelming the slide. Prioritize the most impactful choices that will enhance comprehension and visual emphasis.
+If no significant keywords or phrases are identified in the slide, return an empty array.
+Output Format:
 
-Output the selected words or short sentences in an array format, ensuring they are prioritized for maximum impact.
+Return the selected words or short phrases in an array format, ordered by their importance for maximum impact.
 Return Format:
 
 json
-{
-  "highlights": [
-    "Key word or phrase 1",
-    "Key word or phrase 2",
-    "Key sentence"
-  ]
-}
-
+[
+  "Key word or phrase 1",
+  "Key word or phrase 2",
+  "Key word or phrase 3"
+]
 Example:
 
-Input:
-["Lukaku e Conte: un binomio vincente?", In 2023, the sports industry saw a 15% increase in revenue, driven primarily by digital transformation and fan engagement strategies",
-"Therefore, focusing on technology and community-building is essential for future growth."]
+Input Slide Content: "Ronaldo batte Messi anche su YouTube: 20 milioni di iscritti in un giorno! Cristiano Ronaldo ha lanciato il suo canale YouTube, raggiungendo oltre 20 milioni di iscritti in un solo giorno. Questo successo consolida la sua posizione come il calciatore più popolare su YouTube e sui social media in generale. Il canale di Ronaldo ha superato in poche ore il numero di iscritti del canale di Lionel Messi (2,2 milioni) e Neymar (4,6 milioni), dimostrando ancora una volta la sua immensa popolarità. Con un totale di 947,6 milioni di follower su tutti i social media, Ronaldo si avvicina sempre di più al traguardo del miliardo. Questo successo è dovuto alla sua straordinaria carriera calcistica e alla sua capacità di connettersi con i fan in tutto il mondo. Il successo di Ronaldo sui social media dimostra l'importanza del brand building e della gestione della propria immagine nel mondo dello sport. I manager sportivi devono essere consapevoli del potere dei social media e imparare a sfruttarlo a proprio vantaggio. Vuoi saperne di più sul marketing sportivo e sulla gestione dell'immagine dei calciatori? Visita il sito web di AWE Sport Education per scoprire i nostri corsi e le nostre risorse."
 
 Output:
 
 json
-[
-  [ ],
-  ["15% increase in revenue",
-    "digital transformation",
-    "fan engagement strategies",
-  ],
-  [ "focusing on technology",
-    "essential for future growth"
+{
+  "highlights": [
+    "Ronaldo batte Messi",
+    "20 milioni di iscritti",
+    "lanciato il suo canale YouTube",
+    "calciatore più popolare",
+    "superato in poche ore",
+    "947,6 milioni di follower",
+    "straordinaria carriera calcistica",
+    "brand building",
+    "potere dei social media"
   ]
-]`
+}
+
+`
 
 module.exports.highlightPrompt = highlightPrompt

@@ -29,12 +29,12 @@ const app = express()
 app.use(cors())
 
 app.get("/screenshot", async (req, res) => {
-  const browser = await puppeteer.launch({ headless: true })
+  const browser = await puppeteer.launch({ headless: false })
   const page = await browser.newPage()
   page.setDefaultNavigationTimeout(0)
   await page.setViewport({ width: 1980, height: 1980, deviceScaleFactor: 2 })
   await page.goto(`http://localhost:3000/post/${req.query.id}`, {
-    waitUntil: "networkidle0"
+    waitUntil: "networkidle2"
   })
 
   await page.waitForSelector("#linkedin")
@@ -81,17 +81,11 @@ app.get("/getCarousel", async (req, res) => {
       const post = postSnapshot.data()
       carousel = await summarizeContent(post.body, summarizePrompt)
 
-      const highlights = await summarizeContent(
-        JSON.stringify(carousel),
-        highlightPrompt
-      )
-
       await setDoc(doc(firebaseApp, "carousels", postId), {
         id: postId,
         carousel,
         url: post.url,
-        title: post.title,
-        highlights
+        title: post.title
       })
       carousel = await getDoc(doc(firebaseApp, "carousels", postId))
     }
@@ -102,23 +96,23 @@ app.get("/getCarousel", async (req, res) => {
   res.end()
 })
 
-app.get("/updateHighlights", async (req, res) => {
+app.get("/generateHighlights", async (req, res) => {
   const postId = req.query.id
-  let carousel
+  let highlights
   try {
-    carousel = await getDoc(doc(firebaseApp, "carousels", postId))
-    const highlights = await summarizeContent(
-      JSON.stringify(carousel),
-      highlightPrompt
-    )
-    await updateDoc(doc(firebaseApp, "carousels", postId), {
-      highlights
+    const carousel = await getDoc(doc(firebaseApp, "carousels", postId))
+    let text = ""
+    carousel.data().carousel.forEach((e) => (text = text.concat(e.content)))
+    highlights = await summarizeContent(text, highlightPrompt)
+    await setDoc(doc(firebaseApp, "highlights", postId), {
+      id: postId,
+      highlights: highlights.highlights
     })
-    carousel = await getDoc(doc(firebaseApp, "carousels", postId))
+    highlights = await getDoc(doc(firebaseApp, "highlights", postId))
   } catch (error) {
     console.log(error)
   }
-  res.json(carousel.data())
+  res.json(highlights.data())
   res.end()
 })
 
