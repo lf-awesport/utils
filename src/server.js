@@ -6,7 +6,8 @@ const {
   summarizePrompt,
   dailySummaryPrompt,
   sentimentAnalysisPrompt,
-  cleanTextPrompt
+  cleanTextPrompt,
+  highlightPrompt
 } = require("./prompts")
 const { cfScraper } = require("./cf-scraper.js")
 const { dsScraper } = require("./ds-scraper.js")
@@ -19,7 +20,8 @@ const {
   getDocs,
   collection,
   query,
-  where
+  where,
+  updateDoc
 } = require("firebase/firestore")
 const { firebaseApp } = require("./firebase.js")
 
@@ -27,24 +29,27 @@ const app = express()
 app.use(cors())
 
 app.get("/screenshot", async (req, res) => {
-  const browser = await puppeteer.launch()
+  const browser = await puppeteer.launch({ headless: true })
   const page = await browser.newPage()
   page.setDefaultNavigationTimeout(0)
   await page.setViewport({ width: 1980, height: 1980, deviceScaleFactor: 2 })
   await page.goto(`http://localhost:3000/post/${req.query.id}`, {
     waitUntil: "networkidle0"
   })
+
+  await page.waitForSelector("#linkedin")
+  await page.$eval("#linkedin", (element) => element.click())
   await page.waitForSelector("#carousel")
 
   var doc = new PDFDocument({
-    size: [1080, 1080]
+    size: [1080, 1350]
   })
 
   const ids = req.query.ids
   for (let i = 0; i < ids.length; i++) {
     const element = await page.$(`#${ids[i]}`)
     const img = await element.screenshot({ encoding: "binary" })
-    doc.image(img, 0, 0, { width: 1080, height: 1080 })
+    doc.image(img, 0, 0, { width: 1080, height: 1350 })
     if (i <= ids.length - 2) {
       doc.addPage()
     }
@@ -75,14 +80,41 @@ app.get("/getCarousel", async (req, res) => {
       const postSnapshot = await getDoc(doc(firebaseApp, "posts", postId))
       const post = postSnapshot.data()
       carousel = await summarizeContent(post.body, summarizePrompt)
+
+      const highlights = await summarizeContent(
+        JSON.stringify(carousel),
+        highlightPrompt
+      )
+
       await setDoc(doc(firebaseApp, "carousels", postId), {
         id: postId,
         carousel,
         url: post.url,
-        title: post.title
+        title: post.title,
+        highlights
       })
       carousel = await getDoc(doc(firebaseApp, "carousels", postId))
     }
+  } catch (error) {
+    console.log(error)
+  }
+  res.json(carousel.data())
+  res.end()
+})
+
+app.get("/updateHighlights", async (req, res) => {
+  const postId = req.query.id
+  let carousel
+  try {
+    carousel = await getDoc(doc(firebaseApp, "carousels", postId))
+    const highlights = await summarizeContent(
+      JSON.stringify(carousel),
+      highlightPrompt
+    )
+    await updateDoc(doc(firebaseApp, "carousels", postId), {
+      highlights
+    })
+    carousel = await getDoc(doc(firebaseApp, "carousels", postId))
   } catch (error) {
     console.log(error)
   }

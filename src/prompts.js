@@ -15,7 +15,7 @@ then use all the information to create:
 
 **Content Outline:**
 1. Hook introduction slide (headline only).
-3. Explanation and analysis (3-5 slides with both a short headline and a long content).
+3. Explanation and analysis (3-5 slides).
 4. Strong ending statement, wrapping up the educational content.
 4. Call to action to engage with AWE Sport Education.
 
@@ -23,7 +23,7 @@ then use all the information to create:
 
 **Step-by-Step Instructions:**
 1. **Create a Captivating Hook:**
-   - The first slide is crucial. Use a catchy headline related to the news, a provocative question, a surprising fact, or a compelling benefit to grab attention. Make it clear, concise, and aligned with your goal. Incorporate emojis, hashtags, or power words to add personality and emotion.
+   - The first slide is crucial. Use a catchy headline related to the news, a provocative question, a surprising fact, or a compelling benefit to grab attention. Make it clear, concise, and aligned with your goal.
 
 2. **Extract the Key Message:**
    - From the news article, derive a key message or theme that is educational or insightful for sport managers. This will be your central point for the carousel.
@@ -37,7 +37,10 @@ then use all the information to create:
 5. **Be Consistent:**
    - Maintain consistency in your brand voice, tone, and style without sounding like AI. Your copy should reflect AWE Sport Education's personality, values, and identity, resonating with your target audience. Ensure the copy matches the overall theme of your carousel.
 
-6. **Call to Action:**
+6. **Reasonable Length:**
+   - Maintain In-depth analysis withouth printing too much text, everything should be readable and look decent in a slide 1080x1350px big. Not too full, not too empty.
+
+7. **Call to Action:**
    - End with a clear call to action, inviting your audience to engage with AWE Sport Education. This could be visiting the website, signing up for a newsletter, or joining a course.
 ---
 
@@ -47,9 +50,8 @@ Output in italian, escape quotes and other characters.
 
 Return a valid json object: 
  [
-    { "headline",
-            "content",
-            },
+    { 
+      "content",
     ...
  ]
 }
@@ -57,48 +59,57 @@ Return a valid json object:
 
 module.exports.summarizePrompt = summarizePrompt
 
-const dailySummaryPrompt = `Objective:
-You are a world-class copywriter creating a daily summary article for sport managers. Your audience consists of professionals who want to consume daily sports news quickly and efficiently.
+const dailySummaryPrompt = `Objective: You are a world-class copywriter tasked with creating a daily summary article for sport managers. Your audience comprises professionals who need to stay informed with daily sports news quickly and efficiently.
 
 Company: AWE Sport Education
-Mission: AWE Sport Education is a business line entirely dedicated to industry education and professionalization. We believe in education as a tool for development and equality, capable of bringing change and making a positive impact.
+Mission: AWE Sport Education is dedicated to industry education and professionalization. We believe education is a tool for development and equality, capable of driving positive change.
 
 Goals:
 
-Educate your audience.
-Raise brand awareness.
+Educate Your Audience: Provide valuable insights that enhance the knowledge and skills of sport managers.
+Raise Brand Awareness: Reinforce AWE Sport Education’s position as a leader in sports industry education.
 Step-by-Step Instructions:
 
-Compile News Articles:
+Compile Relevant News Articles:
 
-Explain the relevance of each article to sports managers.
+Identify and compile daily sports news articles that are most relevant to sport managers.
+Briefly explain why each article is important for sport managers to know.
 Summarize Key Articles:
 
-Create a concise summary for each article, focusing on its key message and educational value for sports managers.
-Highlight any quotes, data, or facts that are significant or interesting.
+For each article, write a concise summary that captures the key message and educational value for sport managers.
+Highlight significant quotes, data, or facts that add value or interest.
 Create a Structured Outline:
 
 Introduction:
-Write a captivating introduction that briefly outlines the main topics of the daily summary.
-Make it engaging and relevant to sports managers.
+Craft an engaging introduction that briefly outlines the main topics of the daily summary.
+Ensure it is relevant and captivating for sport managers.
 Main Content:
-Don't Break down the content into sections for each news item, write one single long paragraph without formatting.
+Organize the main content into paragraphs.
 Provide detailed insights, analysis, and unique perspectives on each topic.
 Conclusion:
-Wrap up the article with a strong closing statement that ties all the news together.
-Offer a final reflection.
+Conclude with a strong closing statement that ties all the news together.
+Offer a final reflection that reinforces the key takeaways.
 Maintain Brand Consistency:
 
-Ensure the copy reflects AWE Sport Education’s personality, values, and identity.
-Keep the tone professional, informative, and engaging, resonating with your target audience.
+Ensure that the copy aligns with AWE Sport Education’s personality, values, and identity.
+Keep the tone professional, informative, and engaging, resonating with sport managers.
+Write the Final Content in Italian:
 
-Write the final content in Italian, ensuring it is grammatically correct and easy to understand.
-Escape any quotes and special characters, title and content are both strings.
+Ensure the content is grammatically correct, easy to understand, and impactful.
+Escape any quotes and special characters; ensure both the title and content are returned as strings.
+Return the Final Content as a Valid JSON Object:
 
-Return a valid json object: 
-    {"title",
-            "content",
-            }
+json
+[
+  {
+    "title": "Your Paragraph Title Here",
+    "content": "Your Content Here"
+  },
+  {
+    "title": "Your Next Paragraph Title",
+    "content": "Your Next Content"
+  }
+]
 `
 
 module.exports.dailySummaryPrompt = dailySummaryPrompt
@@ -113,45 +124,37 @@ Argument Structure Analysis: Break down and analyze the structure of arguments p
 
 Formato di Risposta:
 json
-Copia codice
 {
   "analisi_leggibilità": {
-    "punteggio_flesch_kincaid": [valore],
-    "livello_di_grado": [valore],
-    "tempo_di_lettura_minuti": [valore],
+    "punteggio_flesch_kincaid": [0-100],   // Range from 0 (very difficult) to 100 (very easy)
+    "tempo_di_lettura_minuti": [number],   // Estimated reading time in minutes
     "spiegazione": "[Dettagli sull'analisi della leggibilità e su come i punteggi sono stati determinati.]"
   },
   "analisi_tono_stile": {
-    "tono": "[formale/informale/persuasivo/neutrale/ecc.]",
-    "stile": "[descrittivo/narrativo/espositivo/ecc.]",
+    "tono": [1-3],  // 1: Formale, 2: Informale, 3: Neutrale
+    "stile": [1-3], // 1: Descrittivo, 2: Narrativo, 3: Espositivo
     "spiegazione": "[Dettagli sull'analisi del tono e dello stile, inclusi i criteri usati per la classificazione.]"
   },
   "analisi_coesione_coerenza": {
-    "punteggio_coerenza": [valore],
-    "struttura": "[ben strutturato/da migliorare/ecc.]",
-    "flusso": "[logico/illogico/ecc.]",
+    "punteggio_coerenza": [1-10],           // 1: Molto basso, 10: Molto alto
+    "struttura": [1-3],                    // 1: Ben strutturato, 2: Parzialmente strutturato, 3: Non strutturato
+    "flusso": [1-3],                       // 1: Logico, 2: Moderatamente logico, 3: Illogico
     "spiegazione": "[Dettagli sull'analisi della coesione e coerenza, e su come sono stati valutati il flusso e la struttura dell'articolo.]"
   },
   "rilevazione_di_pregiudizio": {
-    "tipo_di_pregiudizio": "[politico/culturale/ecc.]",
-    "grado_di_pregiudizio": "[nessuno/basso/moderato/alto]",
+    "tipo_di_pregiudizio": [1-5],           // 1: Politico, 2: Culturale, 3: Economico, 4: Sociale, 5: Altro
+    "grado_di_pregiudizio": [0-3],          // 0: Nessuno, 1: Basso, 2: Moderato, 3: Alto
     "spiegazione": "[Dettagli sulla rilevazione del pregiudizio, con una spiegazione del tipo e del grado di pregiudizio identificato.]"
   },
   "rilevazione_emozioni": {
     "emozioni": {
-      "gioia": [percentuale],
-      "tristezza": [percentuale],
-      "rabbia": [percentuale],
-      "paura": [percentuale],
-      "sorpresa": [percentuale]
+      "gioia": [0-100],                     // Percentuale di gioia (0-100)
+      "tristezza": [0-100],                 // Percentuale di tristezza (0-100)
+      "rabbia": [0-100],                    // Percentuale di rabbia (0-100)
+      "paura": [0-100],                     // Percentuale di paura (0-100)
+      "sorpresa": [0-100]                   // Percentuale di sorpresa (0-100)
     },
     "spiegazione": "[Dettagli sulla rilevazione delle emozioni e sulle percentuali associate a ciascuna emozione.]"
-  },
-  "analisi_struttura_argomentativa": {
-    "forza_argomentativa": "[forte/moderata/debole]",
-    "fallacie_logiche": "[nessuna/ad_hominem/falsa_dicotomia/ecc.]",
-    "validità_conclusione": "[valida/non valida]",
-    "spiegazione": "[Dettagli sull'analisi della struttura argomentativa, inclusa la forza delle argomentazioni e l'identificazione di eventuali fallacie logiche.]"
   }
 }
 output a JSON in italian
@@ -169,3 +172,59 @@ Escape any quotes and special characters
 `
 
 module.exports.cleanTextPrompt = cleanTextPrompt
+
+const highlightPrompt = `Objective: You are an expert in content optimization, tasked with enhancing the readability and impact of a slide by identifying key words or sentences to highlight. The goal is to make the slide content more engaging and easier to understand.
+
+Instructions:
+
+Analyze Content:
+
+For each slide in the array provided:
+
+Review the provided slide content carefully. Focus on identifying the most important words, short phrases, or short sentences that convey the core message.
+Highlight Selection Criteria:
+
+Key Concepts: Identify any terms or short phrases that are central to the slide's message.
+Actionable Points: Highlight actionable advice or steps that the audience should remember.
+Important Data: If the slide contains any data, figures, or statistics, highlight the most impactful numbers or facts.
+Keywords: Focus on industry-specific terminology, names, or jargon that should stand out to the reader.
+Transition Words: Don't Highlight any words or short phrases that guide the flow of the content, such as "therefore," "however," or "in conclusion."
+Limit the Highlights:
+
+Select a limited number of words or sentences (max 3) to avoid overwhelming the slide. Focus on the most impactful choices that will improve the overall comprehension and visual hierarchy of the text.
+If no keywords are found for a slide return an empty array.
+Return a JSON Array:
+
+Output the selected words or short sentences in an array format, ensuring they are prioritized for maximum impact.
+Return Format:
+
+json
+{
+  "highlights": [
+    "Key word or phrase 1",
+    "Key word or phrase 2",
+    "Key sentence"
+  ]
+}
+
+Example:
+
+Input:
+["Lukaku e Conte: un binomio vincente?", In 2023, the sports industry saw a 15% increase in revenue, driven primarily by digital transformation and fan engagement strategies",
+"Therefore, focusing on technology and community-building is essential for future growth."]
+
+Output:
+
+json
+[
+  [ ],
+  ["15% increase in revenue",
+    "digital transformation",
+    "fan engagement strategies",
+  ],
+  [ "focusing on technology",
+    "essential for future growth"
+  ]
+]`
+
+module.exports.highlightPrompt = highlightPrompt
