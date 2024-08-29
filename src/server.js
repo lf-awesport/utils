@@ -7,7 +7,8 @@ const {
   dailySummaryPrompt,
   sentimentAnalysisPrompt,
   cleanTextPrompt,
-  highlightPrompt
+  highlightPrompt,
+  takeawaysPrompt
 } = require("./prompts")
 const { cfScraper } = require("./cf-scraper.js")
 const { dsScraper } = require("./ds-scraper.js")
@@ -218,6 +219,30 @@ app.get("/getWordCloud", async (req, res) => {
     console.log(error)
   }
   res.json(text.data())
+  res.end()
+})
+
+app.get("/getTakeaways", async (req, res) => {
+  const postId = req.query.id
+  let takeaways
+  try {
+    takeaways = await getDoc(doc(firebaseApp, "takeaways", postId))
+    if (!takeaways.data()) {
+      const postSnapshot = await getDoc(doc(firebaseApp, "posts", postId))
+      const post = postSnapshot.data()
+      takeaways = await summarizeContent(post.body, takeawaysPrompt)
+      await setDoc(doc(firebaseApp, "takeaways", postId), {
+        id: postId,
+        takeaways,
+        url: post.url,
+        title: post.title
+      })
+      takeaways = await getDoc(doc(firebaseApp, "sentiment", postId))
+    }
+  } catch (error) {
+    console.log(error)
+  }
+  res.json(takeaways.data())
   res.end()
 })
 
