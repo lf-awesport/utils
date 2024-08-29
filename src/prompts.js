@@ -250,7 +250,6 @@ Aim for at least 3-5 takeaways, each consisting of a single sentence or a brief 
 Return Format:
 
 json
-Copia codice
 {
   "takeaways": [
     "Takeaway 1",
@@ -261,20 +260,18 @@ Copia codice
     ...
   ]
 }
-Example:
+Input Article Content: "Cristiano Ronaldo ha lanciato il suo canale YouTube, raggiungendo rapidamente oltre 20 milioni di iscritti in un solo giorno. Questo traguardo consolida la sua posizione come il calciatore più popolare sui social media, superando sia Lionel Messi che Neymar in termini di iscritti su YouTube. Con un totale di 947,6 milioni di follower su tutte le piattaforme, Ronaldo si avvicina al miliardo di follower, un chiaro segno del suo fascino globale e della sua efficace gestione del brand. Questo successo evidenzia l'importanza della presenza sui social media per gli atleti e il potere del personal branding nello sport. I manager sportivi dovrebbero riconoscere il valore delle piattaforme digitali per migliorare la carriera e la commerciabilità di un giocatore."
 
-Input Article Content: "Cristiano Ronaldo has launched his YouTube channel, quickly amassing over 20 million subscribers in just one day. This milestone solidifies his position as the most popular footballer on social media, surpassing both Lionel Messi and Neymar in YouTube following. With a total of 947.6 million followers across all platforms, Ronaldo is closing in on the billion-follower mark, a testament to his global appeal and effective brand management. This achievement highlights the importance of social media presence for athletes and the power of personal branding in sports. Sports managers should recognize the value of digital platforms in enhancing a player's career and marketability."
-
-Output in italian:
+Output:
 
 json
 {
   "takeaways": [
-    "Cristiano Ronaldo gained over 20 million YouTube subscribers in just one day.",
-    "Ronaldo now leads as the most popular footballer on social media, surpassing Messi and Neymar.",
-    "With 947.6 million followers, Ronaldo is nearing the billion-follower milestone.",
-    "Ronaldo's success underscores the importance of social media and personal branding for athletes.",
-    "Sports managers should leverage digital platforms to enhance player careers and marketability."
+    "Cristiano Ronaldo ha ottenuto oltre 20 milioni di iscritti su YouTube in un solo giorno.",
+    "Ronaldo ora è il calciatore più popolare sui social media, superando Messi e Neymar.",
+    "Con 947,6 milioni di follower, Ronaldo si avvicina al traguardo di un miliardo di follower.",
+    "Il successo di Ronaldo sottolinea l'importanza dei social media e del personal branding per gli atleti.",
+    "I manager sportivi dovrebbero sfruttare le piattaforme digitali per migliorare la carriera e la commerciabilità dei giocatori."
   ]
 }`
 
