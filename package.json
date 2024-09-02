@@ -12,6 +12,7 @@
     "@google-cloud/translate": "^8.3.0",
     "@google-cloud/vertexai": "^1.4.0",
     "axios": "^1.7.2",
+    "axios-rate-limit": "^1.4.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "es6-promise-pool": "^2.5.0",
@@ -19,6 +20,7 @@
     "find-config": "^1.0.0",
     "firebase": "^10.12.5",
     "json-server": "^1.0.0-beta.1",
+    "jsonrepair": "^3.8.0",
     "pdfkit": "^0.15.0",
     "puppeteer": "^22.15.0",
     "seedrandom": "^3.0.5"
