@@ -187,14 +187,16 @@ app.get("/getSentimentAnalysis", async (req, res) => {
         id: postId,
         analysis,
         url: post.url,
-        title: post.title
+        title: post.title,
+        date: post.date,
+        author: post.author
       })
       analysis = await getDoc(doc(firebaseApp, "sentiment", postId))
     }
   } catch (error) {
     console.log(error)
   }
-  res.json(analysis.data())
+  res.json(analysis?.data())
   res.end()
 })
 

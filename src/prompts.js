@@ -120,9 +120,9 @@ Tone and Style Analysis: Analyze the tone and writing style of the article, cate
 Cohesion and Coherence Analysis: Evaluate the logical flow and connectedness of ideas within the article. Indicate whether the article is well-structured and easy to follow.
 Bias Detection: Identify any potential bias present in the article, such as political bias or agenda-driven content. Indicate the type and degree of bias detected.
 Emotion Detection: Identify the specific emotions conveyed in the article, such as joy, sadness, anger, fear, etc., and provide their intensity levels.
-Argument Structure Analysis: Break down and analyze the structure of arguments presented in the article. Indicate the strength of the reasoning and whether the arguments are logically sound.
 
-Formato di Risposta:
+Formato di Risposta: output a valid JSON in italian.
+
 json
 {
   "analisi_leggibilità": {
@@ -130,20 +130,15 @@ json
     "tempo_di_lettura_minuti": [number],   // Estimated reading time in minutes
     "spiegazione": "[Dettagli sull'analisi della leggibilità e su come i punteggi sono stati determinati.]"
   },
-  "analisi_tono_stile": {
-    "tono": [1-3],  // 1: Formale, 2: Informale, 3: Neutrale
-    "stile": [1-3], // 1: Descrittivo, 2: Narrativo, 3: Espositivo
-    "spiegazione": "[Dettagli sull'analisi del tono e dello stile, inclusi i criteri usati per la classificazione.]"
-  },
   "analisi_coesione_coerenza": {
-    "punteggio_coerenza": [1-10],           // 1: Molto basso, 10: Molto alto
+    "punteggio_coerenza": [0-100],           // 1: Molto basso, 10: Molto alto
     "struttura": [1-3],                    // 1: Ben strutturato, 2: Parzialmente strutturato, 3: Non strutturato
     "flusso": [1-3],                       // 1: Logico, 2: Moderatamente logico, 3: Illogico
     "spiegazione": "[Dettagli sull'analisi della coesione e coerenza, e su come sono stati valutati il flusso e la struttura dell'articolo.]"
   },
   "rilevazione_di_pregiudizio": {
     "tipo_di_pregiudizio": [1-5],           // 1: Politico, 2: Culturale, 3: Economico, 4: Sociale, 5: Altro
-    "grado_di_pregiudizio": [0-3],          // 0: Nessuno, 1: Basso, 2: Moderato, 3: Alto
+    "grado_di_pregiudizio": [0-100],          // 0: Range from 0 (very low) to 100 (very high)
     "spiegazione": "[Dettagli sulla rilevazione del pregiudizio, con una spiegazione del tipo e del grado di pregiudizio identificato.]"
   },
   "rilevazione_emozioni": {
@@ -157,7 +152,6 @@ json
     "spiegazione": "[Dettagli sulla rilevazione delle emozioni e sulle percentuali associate a ciascuna emozione.]"
   }
 }
-output a JSON in italian
 `
 
 module.exports.sentimentAnalysisPrompt = sentimentAnalysisPrompt

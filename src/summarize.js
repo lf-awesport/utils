@@ -1,5 +1,7 @@
 const { VertexAI } = require("@google-cloud/vertexai")
+const { json } = require("express")
 require("dotenv").config({ path: require("find-config")(".env") })
+const { jsonrepair } = require("jsonrepair")
 
 // Initialize Vertex with your Cloud project and location
 const vertex_ai = new VertexAI({
@@ -45,27 +47,29 @@ const generativeModel = (prompt) =>
   })
 
 async function summarizeContent(content, prompt) {
-  const text1 = {
-    text: content
+  try {
+    const text1 = {
+      text: content
+    }
+
+    const req = {
+      contents: [{ role: "user", parts: [text1] }]
+    }
+
+    const model = generativeModel(prompt)
+
+    const streamingResp = await model.generateContentStream(req)
+
+    const rawSummary = (
+      await streamingResp.response
+    ).candidates[0].content.parts[0].text
+      .split("```json")[1]
+      .split("```")[0]
+
+    return JSON.parse(jsonrepair(rawSummary))
+  } catch (e) {
+    console.log(e)
   }
-
-  const req = {
-    contents: [{ role: "user", parts: [text1] }]
-  }
-
-  const model = generativeModel(prompt)
-
-  const streamingResp = await model.generateContentStream(req)
-
-  const rawSummary = (
-    await streamingResp.response
-  ).candidates[0].content.parts[0].text
-    .split("```json")[1]
-    .split("```")[0]
-
-  console.log
-
-  return JSON.parse(rawSummary)
 }
 
 module.exports.summarizeContent = summarizeContent
