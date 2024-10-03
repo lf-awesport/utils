@@ -34,12 +34,6 @@ const helper = async () => {
 }
 
 const helper2 = async () => {
-  const http = rateLimit(axios.create(), {
-    maxRequests: 5,
-    perMilliseconds: 60000
-  })
-  http.getMaxRPS() // 2
-
   let alreadyDone = []
   const dbSnapshot = await getDocs(collection(firebaseApp, "sentiment"))
   const alreadyDoneSnap = await getDocs(collection(firebaseApp, "preview"))
@@ -47,8 +41,6 @@ const helper2 = async () => {
   alreadyDoneSnap.forEach((post) => {
     alreadyDone.push(post.id)
   })
-
-  console.log(alreadyDone.length)
 
   dbSnapshot.forEach((post) => {
     if (!alreadyDone.includes(post.id)) {
