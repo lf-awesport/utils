@@ -189,6 +189,8 @@ app.get("/getSentimentAnalysis", async (req, res) => {
         readability: analysis?.analisi_leggibilità?.punteggio_flesch_kincaid,
         tags: analysis?.tags,
         url: post.url,
+        excerpt: post.excerpt,
+        imgLink: post.imgLink,
         title: post.title,
         date: post.date,
         author: post.author

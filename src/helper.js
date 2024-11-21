@@ -6,7 +6,7 @@ const rateLimit = require("axios-rate-limit")
 const helper = async () => {
   try {
     const http = rateLimit(axios.create(), {
-      maxRequests: 1,
+      maxRequests: 2,
       perMilliseconds: 60000
     })
     http.getMaxRPS()
