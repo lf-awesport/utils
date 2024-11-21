@@ -116,12 +116,97 @@ module.exports.dailySummaryPrompt = dailySummaryPrompt
 
 const sentimentAnalysisPrompt = `Please analyze the following text and provide a detailed JSON response that includes the following aspects:
 Readability Analysis: Determine the readability level of the text, using metrics such as the Flesch-Kincaid score or other readability indices.
-Tone and Style Analysis: Analyze the tone and writing style of the article, categorizing it as formal, informal, persuasive, neutral, etc.
-Cohesion and Coherence Analysis: Evaluate the logical flow and connectedness of ideas within the article. Indicate whether the article is well-structured and easy to follow.
 Bias Detection: Identify any potential bias present in the article, such as political bias or agenda-driven content. Indicate the type and degree of bias detected.
 Emotion Detection: Identify the specific emotions conveyed in the article, such as joy, sadness, anger, fear, etc., and provide their intensity levels.
+Tags: assign one or more tags strictly from the provided sports-related categories. Each article should be tagged based on the primary topics it covers, with a focus on precise classification. Use only the categories from the list below:
 
-Formato di Risposta: output a valid JSON in italian.
+Categories: [Sports Law, Finance, Esport, Event Management, Marketing, Sponsorship, Sport for Good, Sport Equipment, Sport Tourism, Media]
+
+Sports Law:
+Organisation and structure of the ICAS and CAS
+World Anti-Doping Agency (WADA)
+Match-fixing and corruption in sports
+Code of Sports-related Arbitration
+Compliance and Anti-Doping Regulations
+FIFA Compliance Programme
+
+Finance:
+Financial reporting and management
+Accounting in sport
+Statutory financial requirements in sport
+Financial risk management
+Club financial management
+Financial Fair Play
+
+Esport:
+eSport World and stakeholders
+eSport marketing
+Sponsorship in eSport
+eSport events and tournaments
+eSport and education
+Legal aspects of eSport
+
+Event Management:
+Sport event planning and strategy
+Organisational structure for sports events
+Financial planning for events
+Venue and facilities management
+Risk and security management
+
+Fan Experience:
+Fan classification and loyalty
+Fan engagement strategies
+Digital fan experience and new technologies
+Artificial Intelligence (AI) and sports
+Ticketing and membership
+
+Sport Tourism:
+Event sport tourism (e.g., Olympics, FIFA World Cup)
+Active sport tourism (winter/summer destinations)
+Nostalgia sport tourism
+
+Sport Equipment:
+Sports equipment market and technology
+Wearable technology in sports
+Smart sport equipment
+
+Marketing:
+Sport marketing strategies
+Experiential marketing
+Branding and fan experience
+
+Sponsorship:
+Sponsorship models in sport
+Technical sponsorship
+Commercial activations
+
+Media:
+Sports media and broadcasting
+Digital media in sport (OTT platforms)
+Social media management for sports
+
+Sport for Good:
+Ethical practices in sport
+Sport and social impact
+Sport for development initiatives
+
+Identify Key Takeaways:
+Thoroughly read the provided article content. Focus on understanding the central theme, key points, and any actionable advice or conclusions drawn by the author.
+Core Message: Extract the main idea or thesis of the article that encapsulates the overall purpose or argument.
+Essential Insights: Identify critical insights, observations, or findings that add value to the reader’s understanding of the topic.
+Actionable Advice: Highlight any steps, recommendations, or practical advice that the reader can implement.
+Supporting Data: Include any significant data, statistics, or examples that reinforce the article's points.
+Concluding Remarks: Capture the final thoughts or reflections that tie the article together, providing closure or a call to action.
+Output Format:
+
+Return the extracted key takeaways in a bullet point list format, ensuring each takeaway is concise and impactful.
+Limit the Takeaways:
+
+Aim for at least 3-5 takeaways, each consisting of a single sentence or a brief statement. Focus on quality over quantity to maintain clarity and relevance.
+
+Clean text: Please analyze the following text and remove all prepositions, articles, quotes, special caracters,conjunctions, words that are used only once and other common stop words (like "the," "and," "of," "in," etc.). Retain only the most meaningful and important words that convey the key information. The cleaned text should be suitable for generating a word cloud that highlights the primary topics and themes.
+
+Example Output:
 
 json
 {
@@ -129,12 +214,6 @@ json
     "punteggio_flesch_kincaid": [0-100],   // Range from 0 (very difficult) to 100 (very easy)
     "tempo_di_lettura_minuti": [number],   // Estimated reading time in minutes
     "spiegazione": "[Dettagli sull'analisi della leggibilità e su come i punteggi sono stati determinati.]"
-  },
-  "analisi_coesione_coerenza": {
-    "punteggio_coerenza": [0-100],           // 1: Molto basso, 10: Molto alto
-    "struttura": [1-3],                    // 1: Ben strutturato, 2: Parzialmente strutturato, 3: Non strutturato
-    "flusso": [1-3],                       // 1: Logico, 2: Moderatamente logico, 3: Illogico
-    "spiegazione": "[Dettagli sull'analisi della coesione e coerenza, e su come sono stati valutati il flusso e la struttura dell'articolo.]"
   },
   "rilevazione_di_pregiudizio": {
     "tipo_di_pregiudizio": [1-5],           // 1: Politico, 2: Culturale, 3: Economico, 4: Sociale, 5: Altro
@@ -149,23 +228,22 @@ json
       "paura": [0-100],                     // Percentuale di paura (0-100)
       "sorpresa": [0-100]                   // Percentuale di sorpresa (0-100)
     },
-    "spiegazione": "[Dettagli sulla rilevazione delle emozioni e sulle percentuali associate a ciascuna emozione.]"
+    "spiegazione": "[Dettagli sulla rilevazione delle emozioni e sulle percentuali associate a ciascuna emozione.]",
+    tags: [
+    Sponsorship,
+    Marketing,
+    Esports
+    ], 
+    takeaways: [
+  "Key word or phrase 1",
+  "Key word or phrase 2",
+  "Key word or phrase 3"
+  ],
+  cleanText: "The text with only important and relevant words."
   }
-}
 `
 
 module.exports.sentimentAnalysisPrompt = sentimentAnalysisPrompt
-
-const cleanTextPrompt = `Please analyze the following text and remove all prepositions, articles, quotes, special caracters,conjunctions, words that are used only once and other common stop words (like "the," "and," "of," "in," etc.). Retain only the most meaningful and important words that convey the key information. The cleaned text should be suitable for generating a word cloud that highlights the primary topics and themes.
-Text:
-"[Insert text here]"
-Response Format In JSON in italian:
-Return a valid json object: 
-{ text: The text with only important and relevant words.  }
-Escape any quotes and special characters
-`
-
-module.exports.cleanTextPrompt = cleanTextPrompt
 
 const highlightPrompt = `Objective: You are an expert in content optimization, responsible for enhancing the readability and impact of a slide by identifying key words or short phrases to highlight. Your goal is to make the slide content more engaging and easier to understand, emphasizing the most critical information.
 
@@ -220,53 +298,3 @@ json
 `
 
 module.exports.highlightPrompt = highlightPrompt
-
-const takeawaysPrompt = `Objective: You are an expert in content summarization, tasked with extracting the most important takeaways from an article. These takeaways should capture the core message, essential insights, and actionable points that readers should remember.
-
-Instructions:
-
-Analyze the Article:
-
-Thoroughly read the provided article content. Focus on understanding the central theme, key points, and any actionable advice or conclusions drawn by the author.
-Identify Key Takeaways:
-
-Core Message: Extract the main idea or thesis of the article that encapsulates the overall purpose or argument.
-Essential Insights: Identify critical insights, observations, or findings that add value to the reader’s understanding of the topic.
-Actionable Advice: Highlight any steps, recommendations, or practical advice that the reader can implement.
-Supporting Data: Include any significant data, statistics, or examples that reinforce the article's points.
-Concluding Remarks: Capture the final thoughts or reflections that tie the article together, providing closure or a call to action.
-Output Format:
-
-Return the extracted key takeaways in a bullet point list format, ensuring each takeaway is concise and impactful.
-Limit the Takeaways:
-
-Aim for at least 3-5 takeaways, each consisting of a single sentence or a brief statement. Focus on quality over quantity to maintain clarity and relevance.
-Return Format:
-
-json
-{
-  "takeaways": [
-    "Takeaway 1",
-    "Takeaway 2",
-    "Takeaway 3",
-    "Takeaway 4",
-    "Takeaway 5",
-    ...
-  ]
-}
-Input Article Content: "Cristiano Ronaldo ha lanciato il suo canale YouTube, raggiungendo rapidamente oltre 20 milioni di iscritti in un solo giorno. Questo traguardo consolida la sua posizione come il calciatore più popolare sui social media, superando sia Lionel Messi che Neymar in termini di iscritti su YouTube. Con un totale di 947,6 milioni di follower su tutte le piattaforme, Ronaldo si avvicina al miliardo di follower, un chiaro segno del suo fascino globale e della sua efficace gestione del brand. Questo successo evidenzia l'importanza della presenza sui social media per gli atleti e il potere del personal branding nello sport. I manager sportivi dovrebbero riconoscere il valore delle piattaforme digitali per migliorare la carriera e la commerciabilità di un giocatore."
-
-Output:
-
-json
-{
-  "takeaways": [
-    "Cristiano Ronaldo ha ottenuto oltre 20 milioni di iscritti su YouTube in un solo giorno.",
-    "Ronaldo ora è il calciatore più popolare sui social media, superando Messi e Neymar.",
-    "Con 947,6 milioni di follower, Ronaldo si avvicina al traguardo di un miliardo di follower.",
-    "Il successo di Ronaldo sottolinea l'importanza dei social media e del personal branding per gli atleti.",
-    "I manager sportivi dovrebbero sfruttare le piattaforme digitali per migliorare la carriera e la commerciabilità dei giocatori."
-  ]
-}`
-
-module.exports.takeawaysPrompt = takeawaysPrompt

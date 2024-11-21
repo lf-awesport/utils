@@ -4,62 +4,35 @@ const axios = require("axios")
 const rateLimit = require("axios-rate-limit")
 
 const helper = async () => {
-  const http = rateLimit(axios.create(), {
-    maxRequests: 5,
-    perMilliseconds: 60000
-  })
-  http.getMaxRPS() // 2
+  try {
+    const http = rateLimit(axios.create(), {
+      maxRequests: 1,
+      perMilliseconds: 60000
+    })
+    http.getMaxRPS()
 
-  let alreadyDone = []
-  const dbSnapshot = await getDocs(collection(firebaseApp, "posts"))
-  const alreadyDoneSnap = await getDocs(collection(firebaseApp, "sentiment"))
+    let alreadyDone = []
+    const dbSnapshot = await getDocs(collection(firebaseApp, "posts"))
+    const alreadyDoneSnap = await getDocs(collection(firebaseApp, "sentiment"))
 
-  alreadyDoneSnap.forEach((doc) => {
-    alreadyDone.push(doc.id)
-  })
+    alreadyDoneSnap.forEach((doc) => {
+      alreadyDone.push(doc.id)
+    })
 
-  console.log(alreadyDone.length)
-
-  dbSnapshot.forEach((post) => {
-    if (!alreadyDone.includes(post.id)) {
-      http
-        .get(`http://localhost:4000/getSentimentAnalysis`, {
-          params: {
-            id: post.id
-          }
-        })
-        .then(() => console.log("done " + post.id))
-    }
-  })
+    dbSnapshot.forEach((post) => {
+      if (!alreadyDone.includes(post.id)) {
+        http
+          .get(`http://localhost:4000/getSentimentAnalysis`, {
+            params: {
+              id: post.id
+            }
+          })
+          .then(() => console.log("sentiment: " + post.id))
+      }
+    })
+  } catch (e) {
+    console.log(e)
+  }
 }
 
-const helper2 = async () => {
-  let alreadyDone = []
-  const dbSnapshot = await getDocs(collection(firebaseApp, "sentiment"))
-  const alreadyDoneSnap = await getDocs(collection(firebaseApp, "preview"))
-
-  alreadyDoneSnap.forEach((post) => {
-    alreadyDone.push(post.id)
-  })
-
-  dbSnapshot.forEach((post) => {
-    if (!alreadyDone.includes(post.id)) {
-      setDoc(doc(firebaseApp, "preview", post.id), {
-        id: post.id,
-        coherence:
-          post.data().analysis?.analisi_coesione_coerenza?.punteggio_coerenza,
-        prejudice:
-          post.data().analysis?.rilevazione_di_pregiudizio
-            ?.grado_di_pregiudizio,
-        readability:
-          post.data().analysis?.analisi_leggibilità?.punteggio_flesch_kincaid,
-        url: post.data().url,
-        title: post.data().title,
-        date: post.data().date,
-        author: post.data().author
-      })
-    }
-  })
-}
-
-helper2()
+helper()

@@ -6,9 +6,7 @@ const {
   summarizePrompt,
   dailySummaryPrompt,
   sentimentAnalysisPrompt,
-  cleanTextPrompt,
-  highlightPrompt,
-  takeawaysPrompt
+  highlightPrompt
 } = require("./prompts")
 const { cfScraper } = require("./cf-scraper.js")
 const { dsScraper } = require("./ds-scraper.js")
@@ -176,75 +174,31 @@ app.get("/scrapePosts", async (req, res) => {
 
 app.get("/getSentimentAnalysis", async (req, res) => {
   const postId = req.query.id
+  const table = req.query.table || "sentiment"
   let analysis
   try {
-    analysis = await getDoc(doc(firebaseApp, "sentiment", postId))
+    analysis = await getDoc(doc(firebaseApp, table, postId))
     if (!analysis.data()) {
       const postSnapshot = await getDoc(doc(firebaseApp, "posts", postId))
       const post = postSnapshot.data()
       analysis = await summarizeContent(post.body, sentimentAnalysisPrompt)
-      await setDoc(doc(firebaseApp, "sentiment", postId), {
+      await setDoc(doc(firebaseApp, table, postId), {
         id: postId,
         analysis,
+        prejudice: analysis?.rilevazione_di_pregiudizio?.grado_di_pregiudizio,
+        readability: analysis?.analisi_leggibilità?.punteggio_flesch_kincaid,
+        tags: analysis?.tags,
         url: post.url,
         title: post.title,
         date: post.date,
         author: post.author
       })
-      analysis = await getDoc(doc(firebaseApp, "sentiment", postId))
+      analysis = await getDoc(doc(firebaseApp, table, postId))
     }
   } catch (error) {
     console.log(error)
   }
   res.json(analysis?.data())
-  res.end()
-})
-
-app.get("/getWordCloud", async (req, res) => {
-  const postId = req.query.id
-  let text
-  try {
-    text = await getDoc(doc(firebaseApp, "wordcloud", postId))
-    if (!text.data()) {
-      const postSnapshot = await getDoc(doc(firebaseApp, "posts", postId))
-      const post = postSnapshot.data()
-      text = await summarizeContent(post.body, cleanTextPrompt)
-      await setDoc(doc(firebaseApp, "wordcloud", postId), {
-        id: postId,
-        text,
-        url: post.url,
-        title: post.title
-      })
-      text = await getDoc(doc(firebaseApp, "wordcloud", postId))
-    }
-  } catch (error) {
-    console.log(error)
-  }
-  res.json(text.data())
-  res.end()
-})
-
-app.get("/getTakeaways", async (req, res) => {
-  const postId = req.query.id
-  let takeaways
-  try {
-    takeaways = await getDoc(doc(firebaseApp, "takeaways", postId))
-    if (!takeaways.data()) {
-      const postSnapshot = await getDoc(doc(firebaseApp, "posts", postId))
-      const post = postSnapshot.data()
-      takeaways = await summarizeContent(post.body, takeawaysPrompt)
-      await setDoc(doc(firebaseApp, "takeaways", postId), {
-        id: postId,
-        takeaways,
-        url: post.url,
-        title: post.title
-      })
-      takeaways = await getDoc(doc(firebaseApp, "sentiment", postId))
-    }
-  } catch (error) {
-    console.log(error)
-  }
-  res.json(takeaways.data())
   res.end()
 })
 
