@@ -204,4 +204,11 @@ app.get("/getSentimentAnalysis", async (req, res) => {
   res.end()
 })
 
-app.listen(4000)
+module.exports = app
+
+// Avvia il server SOLO se lanci localmente:
+if (require.main === module) {
+  app.listen(4000, () => {
+    console.log("Server listening on port 4000")
+  })
+}

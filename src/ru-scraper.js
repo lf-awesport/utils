@@ -129,7 +129,10 @@ const scrapeUrls = async (browser, category, currentPage, endPage) => {
 }
 
 const ruScraper = async () => {
-  const browser = await puppeteer.launch({ headless: true })
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+  })
 
   const dbSnapshot = await getDocs(collection(firebaseApp, "posts"))
   dbSnapshot.forEach((doc) => {
