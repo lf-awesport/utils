@@ -7,10 +7,9 @@
     "prettier-eslint": "^16.3.0"
   },
   "dependencies": {
+    "@ai-sdk/google-vertex": "^2.0.19",
     "@firebase/firestore": "^4.6.5",
-    "@google-cloud/text-to-speech": "^5.3.0",
-    "@google-cloud/translate": "^8.3.0",
-    "@google-cloud/vertexai": "^1.4.0",
+    "ai": "^4.1.14",
     "axios": "^1.7.2",
     "axios-rate-limit": "^1.4.0",
     "cors": "^2.8.5",
@@ -23,6 +22,7 @@
     "jsonrepair": "^3.8.0",
     "pdfkit": "^0.15.0",
     "puppeteer": "^22.15.0",
-    "seedrandom": "^3.0.5"
+    "seedrandom": "^3.0.5",
+    "serverless-http": "^3.2.0"
   }
 }
