@@ -204,6 +204,11 @@ app.get("/getSentimentAnalysis", async (req, res) => {
   res.end()
 })
 
+// ✅ Add a simple test route
+app.get("/test", (req, res) => {
+  res.send("Hello, World! This is a test route from Vercel deployment.")
+})
+
 module.exports = app
 
 // Avvia il server SOLO se lanci localmente:
