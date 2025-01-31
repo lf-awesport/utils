@@ -49,7 +49,6 @@ async function summarizeContent(content, prompt) {
       topP: 0
     })
 
-    console.log(text)
     const rawSummary = text.split("```json")[1].split("```")[0]
 
     return JSON.parse(jsonrepair(rawSummary))
