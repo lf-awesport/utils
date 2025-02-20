@@ -161,11 +161,12 @@ app.get("/getDailySummary", async (req, res) => {
   }
 })
 
-app.get("/scrapePosts", async (req, res) => {
+app.get("/update", async (req, res) => {
   try {
     await cfScraper()
     await ruScraper()
     await dsScraper()
+    await helper()
   } catch (error) {
     console.log(error)
   }
