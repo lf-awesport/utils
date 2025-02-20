@@ -11,6 +11,7 @@ const {
 const { cfScraper } = require("./cf-scraper.js")
 const { dsScraper } = require("./ds-scraper.js")
 const { ruScraper } = require("./ru-scraper.js")
+const { helper } = require("./helper.js")
 const cors = require("cors")
 const {
   doc,
