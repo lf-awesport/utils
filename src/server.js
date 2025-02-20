@@ -11,7 +11,6 @@ const {
 const { cfScraper } = require("./cf-scraper.js")
 const { dsScraper } = require("./ds-scraper.js")
 const { ruScraper } = require("./ru-scraper.js")
-const { helper } = require("./helper.js")
 const cors = require("cors")
 const {
   doc,
@@ -166,7 +165,6 @@ app.get("/update", async (req, res) => {
     await cfScraper()
     await ruScraper()
     await dsScraper()
-    await helper()
   } catch (error) {
     console.log(error)
   }
@@ -184,7 +182,7 @@ app.get("/getSentimentAnalysis", async (req, res) => {
       const postSnapshot = await getDoc(doc(firebaseApp, "posts", postId))
       const post = postSnapshot.data()
       analysis = await summarizeContent(post.body, sentimentAnalysisPrompt)
-      await setDoc(doc(firebaseApp, table, postId), {
+      const newDoc = {
         id: postId,
         analysis,
         prejudice: analysis?.rilevazione_di_pregiudizio?.grado_di_pregiudizio,
@@ -196,7 +194,8 @@ app.get("/getSentimentAnalysis", async (req, res) => {
         title: post.title,
         date: post.date,
         author: post.author
-      })
+      }
+      await setDoc(doc(firebaseApp, table, postId), newDoc)
       analysis = await getDoc(doc(firebaseApp, table, postId))
     }
   } catch (error) {

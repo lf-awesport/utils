@@ -206,6 +206,13 @@ Aim for at least 3-5 takeaways, each consisting of a single sentence or a brief 
 
 Clean text: Please analyze the following text and remove all prepositions, articles, quotes, special caracters,conjunctions, words that are used only once and other common stop words (like "the," "and," "of," "in," etc.). Retain only the most meaningful and important words that convey the key information. The cleaned text should be suitable for generating a word cloud that highlights the primary topics and themes.
 
+
+Write the Final Content in Italian:
+
+Ensure the content is grammatically correct, easy to understand, and impactful.
+Escape any quotes and special characters;Return the Final Content as a Valid JSON Object:
+
+
 Example Output:
 
 json
@@ -220,15 +227,7 @@ json
     "grado_di_pregiudizio": [0-100],          // 0: Range from 0 (very low) to 100 (very high)
     "spiegazione": "[Dettagli sulla rilevazione del pregiudizio, con una spiegazione del tipo e del grado di pregiudizio identificato.]"
   },
-  "rilevazione_emozioni": {
-    "emozioni": {
-      "gioia": [0-100],                     // Percentuale di gioia (0-100)
-      "tristezza": [0-100],                 // Percentuale di tristezza (0-100)
-      "rabbia": [0-100],                    // Percentuale di rabbia (0-100)
-      "paura": [0-100],                     // Percentuale di paura (0-100)
-      "sorpresa": [0-100]                   // Percentuale di sorpresa (0-100)
-    },
-    "spiegazione": "[Dettagli sulla rilevazione delle emozioni e sulle percentuali associate a ciascuna emozione.]",
+   "spiegazione": "[Dettagli sulla rilevazione delle emozioni e sulle percentuali associate a ciascuna emozione.]",
     tags: [
     Sponsorship,
     Marketing,
@@ -240,6 +239,15 @@ json
   "Key word or phrase 3"
   ],
   cleanText: "The text with only important and relevant words."
+  "rilevazione_emozioni": {
+    "emozioni": {
+      "gioia": [0-100],                     // Percentuale di gioia (0-100)
+      "tristezza": [0-100],                 // Percentuale di tristezza (0-100)
+      "rabbia": [0-100],                    // Percentuale di rabbia (0-100)
+      "paura": [0-100],                     // Percentuale di paura (0-100)
+      "sorpresa": [0-100]                   // Percentuale di sorpresa (0-100)
+    }
+    }
   }
 `
 

@@ -36,3 +36,5 @@ const helper = async () => {
 }
 
 module.exports.helper = helper
+
+helper()
