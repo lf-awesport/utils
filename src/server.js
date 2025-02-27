@@ -2,12 +2,7 @@ const puppeteer = require("puppeteer")
 const express = require("express")
 const PDFDocument = require("pdfkit")
 const { summarizeContent } = require("./summarize.js")
-const {
-  summarizePrompt,
-  dailySummaryPrompt,
-  sentimentAnalysisPrompt,
-  highlightPrompt
-} = require("./prompts")
+const { summarizePrompt, highlightPrompt } = require("./prompts")
 const { cfScraper } = require("./cf-scraper.js")
 const { dsScraper } = require("./ds-scraper.js")
 const { ruScraper } = require("./ru-scraper.js")
@@ -115,51 +110,6 @@ app.get("/generateHighlights", async (req, res) => {
   res.end()
 })
 
-app.get("/getDailySummary", async (req, res) => {
-  const date = req.query.date
-  let urls = []
-  let ids = []
-  let dailySummary
-  try {
-    dailySummary = await getDoc(doc(firebaseApp, "daily", date))
-    if (!dailySummary.data()) {
-      let body = "Daily news of " + date
-      const dailyQuery = query(
-        collection(firebaseApp, "posts"),
-        where("date", "==", date)
-      )
-      const snapshot = await getDocs(dailyQuery)
-      snapshot.forEach((doc) => {
-        if (doc.data().date.includes(date)) {
-          body = body.concat(doc.data().body)
-          urls.push(doc.data().url)
-          ids.push(doc.id)
-        }
-      })
-      if (urls.length > 0) {
-        dailySummary = await summarizeContent(body, dailySummaryPrompt)
-
-        await setDoc(doc(firebaseApp, "daily", date), {
-          id: date,
-          body: dailySummary,
-          urls,
-          ids,
-          title: `Daily Summary ${date}`
-        })
-        dailySummary = await getDoc(doc(firebaseApp, "daily", date))
-      }
-    }
-  } catch (error) {
-    console.log(error)
-  }
-  if (dailySummary.data()) {
-    return res.json(dailySummary.data())
-  } else {
-    res.json()
-    res.end()
-  }
-})
-
 app.get("/update", async (req, res) => {
   try {
     await cfScraper()
@@ -169,39 +119,6 @@ app.get("/update", async (req, res) => {
     console.log(error)
   }
   res.status(200)
-  res.end()
-})
-
-app.get("/getSentimentAnalysis", async (req, res) => {
-  const postId = req.query.id
-  const table = req.query.table || "sentiment"
-  let analysis
-  try {
-    analysis = await getDoc(doc(firebaseApp, table, postId))
-    if (!analysis.data()) {
-      const postSnapshot = await getDoc(doc(firebaseApp, "posts", postId))
-      const post = postSnapshot.data()
-      analysis = await summarizeContent(post.body, sentimentAnalysisPrompt)
-      const newDoc = {
-        id: postId,
-        analysis,
-        prejudice: analysis?.rilevazione_di_pregiudizio?.grado_di_pregiudizio,
-        readability: analysis?.analisi_leggibilità?.punteggio_flesch_kincaid,
-        tags: analysis?.tags,
-        url: post.url,
-        excerpt: post.excerpt,
-        imgLink: post.imgLink,
-        title: post.title,
-        date: post.date,
-        author: post.author
-      }
-      await setDoc(doc(firebaseApp, table, postId), newDoc)
-      analysis = await getDoc(doc(firebaseApp, table, postId))
-    }
-  } catch (error) {
-    console.log(error)
-  }
-  res.json(analysis?.data())
   res.end()
 })
 

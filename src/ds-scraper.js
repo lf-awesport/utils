@@ -24,18 +24,9 @@ const scrapeArticle = async (browser, url) => {
     page.setDefaultNavigationTimeout(0)
     await page.goto(url)
 
-    const imgLink = await page.$eval(".imgleft", (element) => element.src)
-
-    const title = await page.$eval(
-      ".titolodettaglio>h1",
-      (element) => element.innerText
-    )
-    const date = await page.$eval(".testatadata-mob", (element) => {
-      const dateArray = element.outerText
-        .split("DEL")
-        .pop()
-        .split(" ")[0]
-        .split("/")
+    const title = await page.$eval("h1", (element) => element.innerText)
+    const date = await page.$eval("time", (element) => {
+      const dateArray = element.outerText.split("/")
 
       return JSON.stringify(
         new Date(
@@ -47,10 +38,7 @@ const scrapeArticle = async (browser, url) => {
     })
 
     const author = "Diritto & Sport"
-    const excerpt = await page.$eval(
-      ".sottotitolo",
-      (element) => element.innerText
-    )
+    const excerpt = await page.$eval("h2", (element) => element.innerText)
     const body = await page.$$eval("#articolo  p", (elements) =>
       elements.map((e) => e.innerText).join("/n")
     )
@@ -76,8 +64,9 @@ const scrapeArticle = async (browser, url) => {
       },
       { merge: true }
     )
+    console.log(`✅: ${url}`)
   } catch (e) {
-    console.log("error" + url)
+    console.log(`❌: ${e}`)
   }
 }
 
@@ -90,13 +79,13 @@ const scrapeUrls = async (browser, currentPage, endPage) => {
       page.setDefaultNavigationTimeout(0)
 
       await page.goto(
-        `https://www.italiaoggi.it/ultime-notizie/diritto-e-sport-01801/${currentPage}`
+        `https://www.italiaoggi.it/settori/sport?page=${currentPage}`
       )
 
-      const currentUrls = await page.$$eval("section>h3>a", (elements) =>
+      const currentUrls = await page.$$eval("h5>a", (elements) =>
         elements.map((element) => element.href)
       )
-      const currentTitles = await page.$$eval("section>h3>a", (elements) =>
+      const currentTitles = await page.$$eval("h5>a", (elements) =>
         elements.map((element) => element.innerText)
       )
 
@@ -130,7 +119,7 @@ const dsScraper = async () => {
 
   console.log("Articoli salvati: " + dbIds.length)
 
-  await scrapeUrls(browser, 0, 10)
+  await scrapeUrls(browser, 0, 50)
 
   console.log("Nuovi articoli trovati: " + newUrls.length)
 

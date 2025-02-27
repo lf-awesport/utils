@@ -58,8 +58,9 @@ const scrapeArticle = async (browser, url) => {
       },
       { merge: true }
     )
+    console.log(`✅: ${url}`)
   } catch (e) {
-    console.log(e)
+    console.log(`❌: ${url}`)
     await page.close()
   }
 }

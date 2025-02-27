@@ -84,9 +84,10 @@ const scrapeArticle = async (browser, url) => {
       },
       { merge: true }
     )
+    console.log(`✅: ${url}`)
     await page.close()
   } catch (e) {
-    console.log(e)
+    console.log(`❌: ${url}`)
     await page.close()
   }
 }
@@ -141,11 +142,11 @@ const ruScraper = async () => {
 
   console.log("Articoli salvati: " + dbIds.length)
 
-  await scrapeUrls(browser, "media", 0, 10)
-  await scrapeUrls(browser, "lifestyle", 0, 10)
-  await scrapeUrls(browser, "altri-sport", 0, 10)
-  await scrapeUrls(browser, "calcio-internazionale", 0, 10)
-  await scrapeUrls(browser, "serie-a", 0, 10)
+  await scrapeUrls(browser, "media", 0, 50)
+  await scrapeUrls(browser, "lifestyle", 0, 50)
+  await scrapeUrls(browser, "altri-sport", 0, 50)
+  await scrapeUrls(browser, "calcio-internazionale", 0, 50)
+  await scrapeUrls(browser, "serie-a", 0, 50)
 
   console.log("Nuovi articoli trovati: " + newUrls.length)
 
