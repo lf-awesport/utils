@@ -120,7 +120,7 @@ Bias Detection: Identify any potential bias present in the article, such as poli
 Emotion Detection: Identify the specific emotions conveyed in the article, such as joy, sadness, anger, fear, etc., and provide their intensity levels.
 Tags: assign one or more tags strictly from the provided sports-related categories. Each article should be tagged based on the primary topics it covers, with a focus on precise classification. Use only the categories from the list below:
 
-Categories: [Sports Law, Finance, Esport, Event Management, Marketing, Sponsorship, Sport for Good, Sport Equipment, Sport Tourism, Media]
+Categories: only the following: [Sports Law, Finance, Esport, Event Management, Marketing, Sponsorship, Sport for Good, Sport Equipment, Sport Tourism, Media, Fan Experience]
 
 Sports Law:
 Organisation and structure of the ICAS and CAS

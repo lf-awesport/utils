@@ -87,7 +87,73 @@ const processArticles = async () => {
   }
 }
 
-// Run the function immediately (if needed)
-processArticles()
+async function batchUpdateRecommendations() {
+  try {
+    console.log("📥 Fetching all articles...")
+    const sentimentSnapshot = await getDocs(
+      collection(firebaseApp, "sentiment")
+    )
 
-module.exports = { processArticles }
+    let articles = []
+    sentimentSnapshot.forEach((docSnap) => {
+      const data = docSnap.data()
+      if (data.embedding) {
+        articles.push({
+          id: docSnap.id,
+          title: data.title,
+          embedding: data.embedding
+        })
+      }
+    })
+
+    console.log(`✅ Loaded ${articles.length} articles from Firestore.`)
+
+    let updates = {}
+
+    for (let i = 0; i < articles.length; i++) {
+      let similarArticles = []
+
+      for (let j = 0; j < articles.length; j++) {
+        if (i !== j) {
+          const similarity = cosineSimilarity(
+            articles[i].embedding,
+            articles[j].embedding
+          )
+          if (similarity > 0.7) {
+            similarArticles.push({
+              id: articles[j].id,
+              title: articles[j].title,
+              similarity
+            })
+          }
+        }
+      }
+
+      similarArticles.sort((a, b) => b.similarity - a.similarity)
+      updates[articles[i].id] = similarArticles.slice(0, 5)
+    }
+
+    console.log(`🔄 Updating recommendations in Firestore...`)
+
+    const updatePromises = Object.entries(updates).map(
+      ([articleId, recommendations]) =>
+        setDoc(
+          doc(firebaseApp, "sentiment", articleId),
+          { relatedArticles: recommendations },
+          { merge: true }
+        )
+    )
+
+    await Promise.all(updatePromises)
+
+    console.log("✅ Batch recommendations updated for all articles!")
+  } catch (error) {
+    console.error("❌ Error in batchUpdateRecommendations:", error)
+  }
+}
+
+// Run the function immediately (if needed)
+// processArticles()
+batchUpdateRecommendations()
+
+module.exports = { processArticles, batchUpdateRecommendations }
