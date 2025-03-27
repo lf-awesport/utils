@@ -306,3 +306,19 @@ json
 `
 
 module.exports.highlightPrompt = highlightPrompt
+
+const askAgentPrompt = (question) => `
+Sei un assistente specializzato in analisi economico-sportiva, con particolare attenzione al mondo del calcio, al marketing sportivo, alla finanza dei club e ai trend di mercato. 
+Il tuo compito è rispondere alla seguente domanda in modo chiaro, informativo e professionale, basandoti **esclusivamente** sui contenuti degli articoli forniti di seguito. 
+Cita le fonti in modo preciso, linkando gli articoli da cui hai preso le info.
+
+🧠 Domanda dell’utente:
+${question}
+
+Rispondi in formato JSON nel seguente schema:
+{
+  "answer": "testo della risposta",
+}
+`
+
+module.exports.askAgentPrompt = askAgentPrompt

@@ -2,7 +2,11 @@ const puppeteer = require("puppeteer")
 const express = require("express")
 const PDFDocument = require("pdfkit")
 const { summarizeContent } = require("./summarize.js")
-const { summarizePrompt, highlightPrompt } = require("./prompts")
+const {
+  summarizePrompt,
+  highlightPrompt,
+  askAgentPrompt
+} = require("./prompts")
 const { cfScraper } = require("./cf-scraper.js")
 const { dsScraper } = require("./ds-scraper.js")
 const { ruScraper } = require("./ru-scraper.js")
@@ -108,6 +112,50 @@ app.get("/generateHighlights", async (req, res) => {
   }
   res.json(highlights.data())
   res.end()
+})
+
+app.get("/askAgentAboutArticle", async (req, res) => {
+  const postId = req.query.id
+  const question = req.query.q
+  try {
+    const currentPostSnap = await getDoc(doc(firebaseApp, "sentiment", postId))
+    const currentPost = currentPostSnap.data()
+
+    if (!currentPost || !currentPost.relatedArticles) {
+      return res
+        .status(404)
+        .json({ error: "Article or related articles not found" })
+    }
+
+    const relatedIds = currentPost.relatedArticles.map((r) => r.id)
+    const relatedSnaps = await Promise.all(
+      relatedIds.map((id) => getDoc(doc(firebaseApp, "sentiment", id)))
+    )
+
+    const related = relatedSnaps
+      .map((snap) => snap.data())
+      .filter((d) => d !== undefined)
+
+    // Costruzione del context
+    const context = related
+      .map((a) => {
+        return `
+TITOLO: ${a.title}
+AUTORE: ${a.author}
+DATA: ${a.date}
+TAGS: ${Array.isArray(a.tags) ? a.tags.join(", ") : ""}
+ESTRATTO: ${a.excerpt}
+BODY: ${a.analysis?.cleanText || ""}
+`
+      })
+      .join("\n-----------------------------\n")
+
+    const result = await summarizeContent(context, askAgentPrompt(question))
+    res.json(result)
+  } catch (error) {
+    console.error("askAgentAboutArticle error", error)
+    res.status(500).json({ error: error.message })
+  }
 })
 
 app.get("/update", async (req, res) => {
