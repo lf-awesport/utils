@@ -8,7 +8,7 @@ const firestore = new Firestore({
     // Firebase Admin SDK Administrator Service Agent
     // Service Account Token Creator
     client_email: process.env.FB_CLIENT_EMAIL,
-    private_key: process.env.FB_PRIVATE_KEY.replace(/\\n/g, "\n")
+    private_key: process.env.FB_PRIVATE_KEY
   }
 })
 
