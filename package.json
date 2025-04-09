@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@ai-sdk/google-vertex": "^2.0.19",
-    "@firebase/firestore": "^4.6.5",
+    "@google-cloud/firestore": "^7.11.0",
     "ai": "^4.1.14",
     "axios": "^1.7.2",
     "axios-rate-limit": "^1.4.0",
@@ -17,10 +17,9 @@
     "es6-promise-pool": "^2.5.0",
     "express": "^4.19.2",
     "find-config": "^1.0.0",
-    "firebase": "^10.12.5",
     "json-server": "^1.0.0-beta.1",
     "jsonrepair": "^3.8.0",
-    "pdfkit": "^0.15.0",
+    "node-cron": "^3.0.3",
     "puppeteer": "^22.15.0",
     "seedrandom": "^3.0.5",
     "serverless-http": "^3.2.0"

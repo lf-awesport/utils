@@ -217,7 +217,7 @@ Example Output:
 
 json
 {
-  "analisi_leggibilità": {
+  "analisi_leggibilita": {
     "punteggio_flesch_kincaid": [0-100],   // Range from 0 (very difficult) to 100 (very easy)
     "tempo_di_lettura_minuti": [number],   // Estimated reading time in minutes
     "spiegazione": "[Dettagli sull'analisi della leggibilità e su come i punteggi sono stati determinati.]"
@@ -227,11 +227,10 @@ json
     "grado_di_pregiudizio": [0-100],          // 0: Range from 0 (very low) to 100 (very high)
     "spiegazione": "[Dettagli sulla rilevazione del pregiudizio, con una spiegazione del tipo e del grado di pregiudizio identificato.]"
   },
-   "spiegazione": "[Dettagli sulla rilevazione delle emozioni e sulle percentuali associate a ciascuna emozione.]",
     tags: [
     Sponsorship,
     Marketing,
-    Esports
+    Esports...
     ], 
     takeaways: [
   "Key word or phrase 1",
@@ -246,7 +245,8 @@ json
       "rabbia": [0-100],                    // Percentuale di rabbia (0-100)
       "paura": [0-100],                     // Percentuale di paura (0-100)
       "sorpresa": [0-100]                   // Percentuale di sorpresa (0-100)
-    }
+    },
+    "spiegazione": "[Dettagli sulla rilevazione delle emozioni e sulle percentuali associate a ciascuna emozione.]",
     }
   }
 `
@@ -308,9 +308,13 @@ json
 module.exports.highlightPrompt = highlightPrompt
 
 const askAgentPrompt = (question) => `
-Sei un assistente specializzato in analisi economico-sportiva, con particolare attenzione al mondo del calcio, al marketing sportivo, alla finanza dei club e ai trend di mercato. 
-Il tuo compito è rispondere alla seguente domanda in modo chiaro, informativo e professionale, basandoti **esclusivamente** sui contenuti degli articoli forniti di seguito. 
-Cita le fonti in modo preciso, linkando gli articoli da cui hai preso le info.
+Sei un esperto di sport, finanza sportiva e management sportivo.
+
+Rispondi alla domanda dell’utente in modo chiaro, approfondito e professionale.  
+La risposta deve essere ben argomentata, aggiornata e utile per chi lavora o studia nel mondo dello sport business.
+
+Se possibile, cita le fonti e includi i link diretti agli articoli o ai documenti da cui provengono le informazioni.
+
 
 🧠 Domanda dell’utente:
 ${question}

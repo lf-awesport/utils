@@ -1,5 +1,4 @@
 const { createVertex } = require("@ai-sdk/google-vertex")
-const { json } = require("express")
 require("dotenv").config({ path: require("find-config")(".env") })
 const { jsonrepair } = require("jsonrepair")
 const { generateText } = require("ai")
@@ -18,6 +17,7 @@ const vertex_ai = createVertex({
 
 // Instantiate the models
 const generativeModel = vertex_ai(process.env.MODEL, {
+  useSearchGrounding: true,
   safetySettings: [
     {
       category: "HARM_CATEGORY_HATE_SPEECH",

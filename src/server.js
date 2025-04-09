@@ -1,185 +1,97 @@
-const puppeteer = require("puppeteer")
 const express = require("express")
-const PDFDocument = require("pdfkit")
-const { summarizeContent } = require("./summarize.js")
-const {
-  summarizePrompt,
-  highlightPrompt,
-  askAgentPrompt
-} = require("./prompts")
-const { cfScraper } = require("./cf-scraper.js")
-const { dsScraper } = require("./ds-scraper.js")
-const { ruScraper } = require("./ru-scraper.js")
 const cors = require("cors")
+const cron = require("node-cron")
+
 const {
-  doc,
-  setDoc,
-  getDoc,
-  getDocs,
-  collection,
-  query,
-  where,
-  updateDoc
-} = require("firebase/firestore")
-const { firebaseApp } = require("./firebase.js")
+  processArticles,
+  batchUpdateRecommendations
+} = require("./embeddings.js")
+
+const { unifiedScraper } = require("./scraper.js")
 
 const app = express()
 app.use(cors())
 
-app.get("/screenshot", async (req, res) => {
-  const browser = await puppeteer.launch({ headless: true })
-  const page = await browser.newPage()
-  page.setDefaultNavigationTimeout(0)
-  await page.setViewport({ width: 1980, height: 1980, deviceScaleFactor: 2 })
-  await page.goto(`http://localhost:3000/post/${req.query.id}`, {
-    waitUntil: "networkidle2"
-  })
+// // 🧠 Ask Agent using related articles
+// app.get("/askAgentAboutArticle", async (req, res) => {
+//   const postId = req.query.id
+//   const question = req.query.q
+//   try {
+//     const currentPostSnap = await getDoc(doc(firestore, "sentiment", postId))
+//     const currentPost = currentPostSnap.data()
 
-  await page.waitForSelector("#linkedin")
-  await page.$eval("#linkedin", (element) => element.click())
-  await page.waitForSelector("#carousel")
+//     if (!currentPost || !currentPost.relatedArticles) {
+//       return res
+//         .status(404)
+//         .json({ error: "Article or related articles not found" })
+//     }
 
-  var doc = new PDFDocument({
-    size: [1080, 1350]
-  })
+//     const relatedIds = currentPost.relatedArticles.map((r) => r.id)
+//     const relatedSnaps = await Promise.all(
+//       relatedIds.map((id) => getDoc(doc(firestore, "sentiment", id)))
+//     )
 
-  const ids = req.query.ids
-  for (let i = 0; i < ids.length; i++) {
-    const element = await page.$(`#${ids[i]}`)
-    const img = await element.screenshot({ encoding: "binary" })
-    doc.image(img, 0, 0, { width: 1080, height: 1350 })
-    if (i <= ids.length - 2) {
-      doc.addPage()
-    }
-  }
+//     const related = relatedSnaps
+//       .map((snap) => snap.data())
+//       .filter((d) => d !== undefined)
 
-  // Set some headers
-  res.statusCode = 200
-  res.setHeader("Content-type", "application/pdf")
-  res.setHeader("Access-Control-Allow-Origin", "*")
+//     const context = related
+//       .map((a) => {
+//         return `
+// TITOLO: ${a.title}
+// AUTORE: ${a.author}
+// DATA: ${a.date}
+// TAGS: ${Array.isArray(a.tags) ? a.tags.join(", ") : ""}
+// ESTRATTO: ${a.excerpt}
+// BODY: ${a.analysis?.cleanText || ""}
+// `
+//       })
+//       .join("\n-----------------------------\n")
 
-  // Header to force download
-  res.setHeader(
-    "Content-disposition",
-    `attachment; filename=${req.query.id}.pdf`
-  )
+//     const result = await summarizeContent(context, askAgentPrompt(question))
+//     res.json(result)
+//   } catch (error) {
+//     console.error("askAgentAboutArticle error", error)
+//     res.status(500).json({ error: error.message })
+//   }
+// })
 
-  doc.pipe(res)
-  doc.end()
-  await browser.close()
-})
-
-app.get("/getCarousel", async (req, res) => {
-  const postId = req.query.id
-  let carousel
+// 📦 Aggiorna articoli (scraping + analisi + embeddings)
+app.get("/update", async (req, res) => {
   try {
-    carousel = await getDoc(doc(firebaseApp, "carousels", postId))
-    if (!carousel.data()) {
-      const postSnapshot = await getDoc(doc(firebaseApp, "posts", postId))
-      const post = postSnapshot.data()
-      carousel = await summarizeContent(post.body, summarizePrompt)
-
-      await setDoc(doc(firebaseApp, "carousels", postId), {
-        id: postId,
-        carousel,
-        url: post.url,
-        title: post.title
-      })
-      carousel = await getDoc(doc(firebaseApp, "carousels", postId))
-    }
+    await unifiedScraper()
+    await processArticles()
+    await batchUpdateRecommendations()
+    res.status(200).send("✅ Update complete!")
   } catch (error) {
-    console.log(error)
-  }
-  res.json(carousel.data())
-  res.end()
-})
-
-app.get("/generateHighlights", async (req, res) => {
-  const postId = req.query.id
-  let highlights
-  try {
-    const carousel = await getDoc(doc(firebaseApp, "carousels", postId))
-    let text = ""
-    carousel.data().carousel.forEach((e) => (text = text.concat(e.content)))
-    highlights = await summarizeContent(text, highlightPrompt)
-    await setDoc(doc(firebaseApp, "highlights", postId), {
-      id: postId,
-      highlights: highlights.highlights
-    })
-    highlights = await getDoc(doc(firebaseApp, "highlights", postId))
-  } catch (error) {
-    console.log(error)
-  }
-  res.json(highlights.data())
-  res.end()
-})
-
-app.get("/askAgentAboutArticle", async (req, res) => {
-  const postId = req.query.id
-  const question = req.query.q
-  try {
-    const currentPostSnap = await getDoc(doc(firebaseApp, "sentiment", postId))
-    const currentPost = currentPostSnap.data()
-
-    if (!currentPost || !currentPost.relatedArticles) {
-      return res
-        .status(404)
-        .json({ error: "Article or related articles not found" })
-    }
-
-    const relatedIds = currentPost.relatedArticles.map((r) => r.id)
-    const relatedSnaps = await Promise.all(
-      relatedIds.map((id) => getDoc(doc(firebaseApp, "sentiment", id)))
-    )
-
-    const related = relatedSnaps
-      .map((snap) => snap.data())
-      .filter((d) => d !== undefined)
-
-    // Costruzione del context
-    const context = related
-      .map((a) => {
-        return `
-TITOLO: ${a.title}
-AUTORE: ${a.author}
-DATA: ${a.date}
-TAGS: ${Array.isArray(a.tags) ? a.tags.join(", ") : ""}
-ESTRATTO: ${a.excerpt}
-BODY: ${a.analysis?.cleanText || ""}
-`
-      })
-      .join("\n-----------------------------\n")
-
-    const result = await summarizeContent(context, askAgentPrompt(question))
-    res.json(result)
-  } catch (error) {
-    console.error("askAgentAboutArticle error", error)
+    console.error("❌ Error during update:", error)
     res.status(500).json({ error: error.message })
   }
 })
 
-app.get("/update", async (req, res) => {
-  try {
-    await cfScraper()
-    await ruScraper()
-    await dsScraper()
-  } catch (error) {
-    console.log(error)
-  }
-  res.status(200)
-  res.end()
-})
-
-// ✅ Add a simple test route
+// 🧪 Test endpoint
 app.get("/test", (req, res) => {
-  res.send("Hello, World! This is a test route from Vercel deployment.")
+  res.send("✅ Server is running correctly!")
 })
 
-module.exports = app
-
-// Avvia il server SOLO se lanci localmente:
+// 🚀 Avvio locale o export per Vercel
 if (require.main === module) {
   app.listen(4000, () => {
     console.log("Server listening on port 4000")
   })
 }
+
+// 🔁 Esegui aggiornamento ogni 12 ore (alle 00:00 e alle 12:00)
+cron.schedule("0 */12 * * *", async () => {
+  console.log("🕒 Cron job started: updating articles + embeddings")
+  try {
+    await unifiedScraper()
+    await processArticles()
+    await batchUpdateRecommendations()
+    console.log("✅ Cron job completed")
+  } catch (e) {
+    console.error("❌ Cron job error:", e)
+  }
+})
+
+module.exports = app

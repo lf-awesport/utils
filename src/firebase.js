@@ -1,18 +1,15 @@
-const { initializeApp } = require("firebase/app")
-const { getFirestore } = require("firebase/firestore")
+const { Firestore } = require("@google-cloud/firestore")
 require("dotenv").config({ path: require("find-config")(".env") })
 
-const firebaseConfig = {
-  apiKey: process.env.FB_API_KEY,
-  authDomain: process.env.FB_AUTH_DOMAIN,
+const firestore = new Firestore({
   projectId: process.env.FB_PROJECT_ID,
-  storageBucket: process.env.FB_STORAGE_BUCKET,
-  messagingSenderId: process.env.FB_MESSAGING_SENDER_ID,
-  appId: process.env.FB_APP_ID
-}
+  credentials: {
+    //CREATE SERVICE ACCOUNT WITH PERMISSIONS: Cloud Datastore Owner
+    // Firebase Admin SDK Administrator Service Agent
+    // Service Account Token Creator
+    client_email: process.env.FB_CLIENT_EMAIL,
+    private_key: process.env.FB_PRIVATE_KEY.replace(/\\n/g, "\n")
+  }
+})
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig)
-const db = getFirestore(app)
-
-module.exports.firebaseApp = db
+module.exports.firestore = firestore

@@ -1,14 +1,14 @@
-const { collection, getDocs, setDoc, doc } = require("firebase/firestore")
-const { firebaseApp } = require("./firebase.js")
+const { FieldValue } = require("@google-cloud/firestore")
+const { firestore } = require("./firebase.js")
 const axios = require("axios")
 const rateLimit = require("axios-rate-limit")
 const { createVertex } = require("@ai-sdk/google-vertex")
 const { embed, cosineSimilarity } = require("ai")
-const { sentimentAnalysisPrompt } = require("./prompts")
+const { sentimentAnalysisPrompt } = require("./prompts.js")
 const { summarizeContent } = require("./summarize.js")
 require("dotenv").config({ path: require("find-config")(".env") })
 
-// Initialize Vertex AI client
+// Initialize Vertex AI clientA
 const vertex_ai = createVertex({
   project: process.env.PROJECT_ID,
   location: process.env.LOCATION,
@@ -21,69 +21,85 @@ const vertex_ai = createVertex({
 })
 
 /**
- * 🔹 Single Async Function: Processes Articles → Generates Embeddings → Gets Sentiment Analysis
+ * 🔁 Processa nuovi articoli da "posts", li arricchisce e li salva in "sentiment"
  */
 const processArticles = async () => {
   try {
-    // Setup Axios with rate limiting (max 2 requests per 60 sec)
     const http = rateLimit(axios.create(), {
       maxRequests: 2,
       perMilliseconds: 60000
     })
 
-    // Fetch existing articles & sentiment data
-    const dbSnapshot = await getDocs(collection(firebaseApp, "posts"))
-    const alreadyDoneSnap = await getDocs(collection(firebaseApp, "sentiment"))
+    const postsSnap = await firestore.collection("posts").get()
+    const sentimentSnap = await firestore.collection("sentiment").get()
 
-    let alreadyDone = new Set()
-    alreadyDoneSnap.forEach((doc) => alreadyDone.add(doc.id))
+    const alreadyDone = new Set()
+    sentimentSnap.forEach((doc) => alreadyDone.add(doc.id))
 
-    // Iterate through articles
-    for (const post of dbSnapshot.docs) {
+    for (const post of postsSnap.docs) {
       const postId = post.id
-      if (alreadyDone.has(postId)) continue // Skip if already processed
+      if (alreadyDone.has(postId)) continue
 
-      console.log(`Processing article: ${postId}`)
-
-      // Fetch article data
+      console.log(`🚀 Processing article: ${postId}`)
       const postData = post.data()
-      // 🔹 Generate Embedding using Vercel AI SDK (Google Vertex)
 
-      const { embedding } = await embed({
-        model: vertex_ai.textEmbeddingModel(
-          "textembedding-gecko-multilingual@latest"
-        ), // Official Google Vertex embedding model
-        value: postData.body
-      })
+      try {
+        // 1. Analisi semantica
+        const analysis = await summarizeContent(
+          postData.body,
+          sentimentAnalysisPrompt
+        )
 
-      // 🔹 Fetch Sentiment Analysis (if not exists)
-      const analysis = await summarizeContent(
-        postData.body,
-        sentimentAnalysisPrompt
-      )
+        if (!analysis || !analysis.analisi_leggibilita) {
+          throw new Error("Invalid or incomplete analysis")
+        }
 
-      // 🔹 Store embedding & sentiment in Firestore
-      const newDoc = {
-        id: postId,
-        embedding,
-        analysis,
-        prejudice: analysis?.rilevazione_di_pregiudizio?.grado_di_pregiudizio,
-        readability: analysis?.analisi_leggibilità?.punteggio_flesch_kincaid,
-        tags: analysis?.tags,
-        url: postData.url,
-        excerpt: postData.excerpt,
-        imgLink: postData.imgLink,
-        title: postData.title,
-        date: postData.date,
-        author: postData.author
+        // 2. Prepara il contenuto completo per l'embedding
+        const fullText = `
+TITOLO: ${postData.title}
+AUTORE: ${postData.author}
+DATA: ${postData.date}
+TAGS: ${Array.isArray(analysis?.tags) ? analysis.tags.join(", ") : ""}
+ESTRATTO: ${postData.excerpt}
+BODY: ${postData.body}
+---
+ANALISI:
+${JSON.stringify(analysis)}
+`.trim()
+
+        // 3. Genera embedding
+        const { embedding } = await embed({
+          model: vertex_ai.textEmbeddingModel(process.env.EMBEDDING_MODEL),
+          value: fullText
+        })
+
+        // 4. Salva tutto su Firestore
+        const newDoc = {
+          id: postId,
+          embedding: FieldValue.vector(embedding),
+          analysis,
+          prejudice: analysis?.rilevazione_di_pregiudizio?.grado_di_pregiudizio,
+          readability: analysis?.analisi_leggibilita?.punteggio_flesch_kincaid,
+          tags: analysis?.tags,
+          url: postData.url,
+          excerpt: postData.excerpt,
+          imgLink: postData.imgLink,
+          title: postData.title,
+          date: postData.date,
+          author: postData.author
+        }
+
+        await firestore.collection("sentiment").doc(postId).set(newDoc, {
+          merge: true
+        })
+
+        console.log(`✅ Saved enriched article: ${postId}`)
+      } catch (innerError) {
+        console.warn(`⚠️ Skipping article ${postId}: ${innerError.message}`)
       }
-      await setDoc(doc(firebaseApp, "sentiment", postId), newDoc, {
-        merge: true
-      })
-      console.log(`✅ Processed article: ${postId}`)
     }
   } catch (error) {
-    console.error("❌ Error processing articles:", error)
+    console.error("❌ Fatal error in processArticles:", error)
   }
 }
 
@@ -152,8 +168,8 @@ async function batchUpdateRecommendations() {
   }
 }
 
+module.exports = { processArticles, batchUpdateRecommendations }
+
 // Run the function immediately (if needed)
 // processArticles()
-batchUpdateRecommendations()
-
-module.exports = { processArticles, batchUpdateRecommendations }
+// batchUpdateRecommendations()
