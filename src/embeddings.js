@@ -3,7 +3,7 @@ const { firestore } = require("./firebase.js")
 const axios = require("axios")
 const rateLimit = require("axios-rate-limit")
 const { createVertex } = require("@ai-sdk/google-vertex")
-const { embed, cosineSimilarity } = require("ai")
+const { embed } = require("ai")
 const { sentimentAnalysisPrompt } = require("./prompts.js")
 const { summarizeContent } = require("./summarize.js")
 require("dotenv").config({ path: require("find-config")(".env") })
@@ -105,64 +105,58 @@ ${JSON.stringify(analysis)}
 
 async function batchUpdateRecommendations() {
   try {
-    console.log("📥 Fetching all articles...")
-    const sentimentSnapshot = await getDocs(
-      collection(firebaseApp, "sentiment")
-    )
+    console.log("📥 Fetching all articles from Firestore...")
 
-    let articles = []
-    sentimentSnapshot.forEach((docSnap) => {
-      const data = docSnap.data()
-      if (data.embedding) {
-        articles.push({
-          id: docSnap.id,
-          title: data.title,
-          embedding: data.embedding
-        })
+    const sentimentSnap = await firestore.collection("sentiment").get()
+    const articles = sentimentSnap.docs
+
+    for (const doc of articles) {
+      const articleId = doc.id
+      const articleData = doc.data()
+
+      if (!articleData.embedding) {
+        console.warn(`⚠️ Skipping ${articleId}: no embedding`)
+        continue
       }
-    })
 
-    console.log(`✅ Loaded ${articles.length} articles from Firestore.`)
+      console.log(`🔍 Searching related articles for ${articleId}`)
 
-    let updates = {}
+      const vectorQuery = firestore.collection("sentiment").findNearest({
+        vectorField: "embedding",
+        queryVector: articleData.embedding,
+        limit: 10,
+        distanceMeasure: "COSINE"
+      })
 
-    for (let i = 0; i < articles.length; i++) {
-      let similarArticles = []
+      const resultsSnap = await vectorQuery.get()
 
-      for (let j = 0; j < articles.length; j++) {
-        if (i !== j) {
-          const similarity = cosineSimilarity(
-            articles[i].embedding,
-            articles[j].embedding
-          )
-          if (similarity > 0.7) {
-            similarArticles.push({
-              id: articles[j].id,
-              title: articles[j].title,
-              similarity
-            })
-          }
+      const relatedArticles = []
+
+      resultsSnap.forEach((matchDoc) => {
+        if (matchDoc.id !== articleId) {
+          const matchData = matchDoc.data()
+          relatedArticles.push({
+            id: matchDoc.id,
+            title: matchData.title,
+            //TODO FIX
+            similarity:
+              matchDoc.distance != null
+                ? Math.round((1 - matchDoc.distance) * 1000) / 1000
+                : null
+          })
         }
-      }
+      })
 
-      similarArticles.sort((a, b) => b.similarity - a.similarity)
-      updates[articles[i].id] = similarArticles.slice(0, 5)
+      // Salva solo i top 10
+      await firestore
+        .collection("sentiment")
+        .doc(articleId)
+        .set({ relatedArticles: relatedArticles.slice(0, 10) }, { merge: true })
+
+      console.log(`✅ Saved recommendations for ${articleId}`)
     }
 
-    console.log(`🔄 Updating recommendations in Firestore...`)
-
-    const updatePromises = Object.entries(updates).map(
-      ([articleId, recommendations]) =>
-        setDoc(
-          doc(firebaseApp, "sentiment", articleId),
-          { relatedArticles: recommendations },
-          { merge: true }
-        )
-    )
-
-    await Promise.all(updatePromises)
-
-    console.log("✅ Batch recommendations updated for all articles!")
+    console.log("🎉 All recommendations updated!")
   } catch (error) {
     console.error("❌ Error in batchUpdateRecommendations:", error)
   }

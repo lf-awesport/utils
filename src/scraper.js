@@ -8,6 +8,7 @@ async function getExistingIds() {
   const snapshot = await firestore.collection("posts").get()
   const ids = new Set()
   snapshot.forEach((doc) => ids.add(doc.id))
+  console.log(`🔍 Found ${ids.size}articles in db`)
   return ids
 }
 
@@ -95,7 +96,7 @@ async function scrapeRU(browser, dbIds, urls) {
     "serie-a"
   ]
   for (const category of categories) {
-    for (let pageNum = 1; pageNum <= 5; pageNum++) {
+    for (let pageNum = 1; pageNum <= 10; pageNum++) {
       const page = await browser.newPage()
       await page.goto(
         `https://www.rivistaundici.com/category/${category}/page/${pageNum}`

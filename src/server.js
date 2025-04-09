@@ -7,54 +7,26 @@ const {
   batchUpdateRecommendations
 } = require("./embeddings.js")
 
+const { queryRAG } = require("./queryRAG.js")
+
 const { unifiedScraper } = require("./scraper.js")
 
 const app = express()
 app.use(cors())
+app.use(express.json())
 
-// // 🧠 Ask Agent using related articles
-// app.get("/askAgentAboutArticle", async (req, res) => {
-//   const postId = req.query.id
-//   const question = req.query.q
-//   try {
-//     const currentPostSnap = await getDoc(doc(firestore, "sentiment", postId))
-//     const currentPost = currentPostSnap.data()
-
-//     if (!currentPost || !currentPost.relatedArticles) {
-//       return res
-//         .status(404)
-//         .json({ error: "Article or related articles not found" })
-//     }
-
-//     const relatedIds = currentPost.relatedArticles.map((r) => r.id)
-//     const relatedSnaps = await Promise.all(
-//       relatedIds.map((id) => getDoc(doc(firestore, "sentiment", id)))
-//     )
-
-//     const related = relatedSnaps
-//       .map((snap) => snap.data())
-//       .filter((d) => d !== undefined)
-
-//     const context = related
-//       .map((a) => {
-//         return `
-// TITOLO: ${a.title}
-// AUTORE: ${a.author}
-// DATA: ${a.date}
-// TAGS: ${Array.isArray(a.tags) ? a.tags.join(", ") : ""}
-// ESTRATTO: ${a.excerpt}
-// BODY: ${a.analysis?.cleanText || ""}
-// `
-//       })
-//       .join("\n-----------------------------\n")
-
-//     const result = await summarizeContent(context, askAgentPrompt(question))
-//     res.json(result)
-//   } catch (error) {
-//     console.error("askAgentAboutArticle error", error)
-//     res.status(500).json({ error: error.message })
-//   }
-// })
+app.post("/askAgent", async (req, res) => {
+  const question = req.body.q
+  if (!question)
+    return res.status(400).json({ error: "Missing query param `q`" })
+  try {
+    const answer = await queryRAG(question)
+    res.json(answer)
+  } catch (error) {
+    console.error("❌ Error in /askAgent:", error)
+    res.status(500).json({ error: error.message })
+  }
+})
 
 // 📦 Aggiorna articoli (scraping + analisi + embeddings)
 app.get("/update", async (req, res) => {
@@ -87,7 +59,8 @@ cron.schedule("0 */12 * * *", async () => {
   try {
     await unifiedScraper()
     await processArticles()
-    await batchUpdateRecommendations()
+    //TODO RE Enable
+    // await batchUpdateRecommendations()
     console.log("✅ Cron job completed")
   } catch (e) {
     console.error("❌ Cron job error:", e)
