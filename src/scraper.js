@@ -1,4 +1,5 @@
-const puppeteer = require("puppeteer")
+const puppeteer = require("puppeteer-core")
+const chromium = require("chromium")
 const Pool = require("es6-promise-pool")
 const rng = require("seedrandom")
 const { firestore } = require("./firebase") // ⚠️ Usa Firestore SDK Cloud
@@ -158,9 +159,13 @@ async function scrapeArticleRU(browser, url) {
 // 🔹 Main function
 async function runAllScrapers() {
   const browser = await puppeteer.launch({
-    headless: true,
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
     args: ["--no-sandbox"]
   })
+
   const dbIds = await getExistingIds()
 
   const urls = []
