@@ -53,6 +53,7 @@ async function scrapeCF(browser, dbIds, urls) {
   for (let i = 0; i < ids.length; i++) {
     if (!dbIds.has(ids[i])) urls.push(allUrls[i])
   }
+  console.log(`✅ CF & SF`)
 }
 
 async function scrapeArticleCF(browser, url) {
@@ -110,7 +111,7 @@ async function scrapeRU(browser, dbIds, urls) {
     "serie-a"
   ]
   for (const category of categories) {
-    for (let pageNum = 1; pageNum <= 10; pageNum++) {
+    for (let pageNum = 1; pageNum <= 3; pageNum++) {
       const page = await browser.newPage()
       await page.setUserAgent(userAgent)
       await page.goto(
@@ -134,6 +135,7 @@ async function scrapeRU(browser, dbIds, urls) {
       }
     }
   }
+  console.log(`✅ RU`)
 }
 
 async function scrapeArticleRU(browser, url) {
