@@ -57,7 +57,7 @@ if (require.main === module) {
 }
 
 // 🕐 Ogni ora: chiama /update
-cron.schedule("30 * * * *", async () => {
+cron.schedule("40 * * * *", async () => {
   try {
     console.log("🔁 Cron job avviato - chiamata a /update")
     const response = await axios.get(
