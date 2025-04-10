@@ -1,5 +1,6 @@
 const express = require("express")
 const cors = require("cors")
+const axios = require("axios")
 const cron = require("node-cron")
 
 const {
@@ -55,7 +56,7 @@ if (require.main === module) {
 }
 
 // 🕐 Ogni ora: chiama /update
-cron.schedule("5 * * * *", async () => {
+cron.schedule("10 * * * *", async () => {
   try {
     console.log("🔁 Cron job avviato - chiamata a /update")
     const response = await axios.get(
