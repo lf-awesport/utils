@@ -30,6 +30,9 @@ app.post("/askAgent", async (req, res) => {
 
 // 📦 Aggiorna articoli (scraping + analisi + embeddings)
 app.get("/update", async (req, res) => {
+  if (req.query.key !== process.env.CRON_SECRET) {
+    return res.status(403).send("Forbidden")
+  }
   try {
     await unifiedScraper()
     await processArticles()
@@ -43,6 +46,9 @@ app.get("/update", async (req, res) => {
 
 // 🧪 Test endpoint
 app.get("/test", (req, res) => {
+  if (req.query.key !== process.env.CRON_SECRET) {
+    return res.status(403).send("Forbidden")
+  }
   res.send("✅ Server is running correctly!")
 })
 
