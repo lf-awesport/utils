@@ -2,6 +2,7 @@ const express = require("express")
 const cors = require("cors")
 const axios = require("axios")
 const cron = require("node-cron")
+require("dotenv").config({ path: require("find-config")(".env") })
 
 const {
   processArticles,
@@ -56,7 +57,7 @@ if (require.main === module) {
 }
 
 // 🕐 Ogni ora: chiama /update
-cron.schedule("10 * * * *", async () => {
+cron.schedule("20 * * * *", async () => {
   try {
     console.log("🔁 Cron job avviato - chiamata a /update")
     const response = await axios.get(
