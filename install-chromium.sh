@@ -12,10 +12,9 @@ if [[ "$RENDER" != "true" ]]; then
 fi
 
 # Store/pull Puppeteer cache with build cache
-if [[ ! -d $PUPPETEER_CACHE_DIR ]]; then 
+if [[ -d "$XDG_CACHE_HOME/puppeteer" ]]; then
   echo "📦 Copying Puppeteer Cache from Build Cache" 
-  cp -R $XDG_CACHE_HOME/puppeteer/ $PUPPETEER_CACHE_DIR
+  cp -R "$XDG_CACHE_HOME/puppeteer/" "$PUPPETEER_CACHE_DIR"
 else 
-  echo "💾 Storing Puppeteer Cache in Build Cache" 
-  cp -R $PUPPETEER_CACHE_DIR $XDG_CACHE_HOME
+  echo "⚠️ Nessuna Puppeteer Cache trovata, verrà installata da zero"
 fi

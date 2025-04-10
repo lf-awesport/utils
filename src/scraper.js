@@ -3,6 +3,9 @@ const Pool = require("es6-promise-pool")
 const rng = require("seedrandom")
 const { firestore } = require("./firebase") // ⚠️ Usa Firestore SDK Cloud
 
+const userAgent =
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
+
 // Helper per evitare duplicati
 async function getExistingIds() {
   const snapshot = await firestore.collection("posts").get()
@@ -23,8 +26,9 @@ function createPromiseProducer(browser, urls, scrapeArticle) {
 // 🔹 Calcio & Finanza + Sport & Finanza
 async function scrapeCF(browser, dbIds, urls) {
   const page = await browser.newPage()
+  await page.setUserAgent(userAgent)
   await page.goto("https://www.calcioefinanza.it/", {
-    waitUntil: "networkidle0",
+    waitUntil: "networkidle2",
     timeout: 60000
   })
   const urlsCF = await page.$$eval("article>a", (els) => els.map((e) => e.href))
@@ -33,7 +37,7 @@ async function scrapeCF(browser, dbIds, urls) {
   )
 
   await page.goto("https://www.sportefinanza.it/", {
-    waitUntil: "networkidle0",
+    waitUntil: "networkidle2",
     timeout: 60000
   })
   const urlsSF = await page.$$eval("article>a", (els) => els.map((e) => e.href))
@@ -53,9 +57,10 @@ async function scrapeCF(browser, dbIds, urls) {
 
 async function scrapeArticleCF(browser, url) {
   const page = await browser.newPage()
+  await page.setUserAgent(userAgent)
   try {
     await page.goto(url, {
-      waitUntil: "networkidle0",
+      waitUntil: "networkidle2",
       timeout: 60000
     })
     const title = await page.$eval(".a-title>h1", (el) => el.innerText)
@@ -107,10 +112,11 @@ async function scrapeRU(browser, dbIds, urls) {
   for (const category of categories) {
     for (let pageNum = 1; pageNum <= 10; pageNum++) {
       const page = await browser.newPage()
+      await page.setUserAgent(userAgent)
       await page.goto(
         `https://www.rivistaundici.com/category/${category}/page/${pageNum}`,
         {
-          waitUntil: "networkidle0",
+          waitUntil: "networkidle2",
           timeout: 60000
         }
       )
@@ -132,9 +138,10 @@ async function scrapeRU(browser, dbIds, urls) {
 
 async function scrapeArticleRU(browser, url) {
   const page = await browser.newPage()
+  await page.setUserAgent(userAgent)
   try {
     await page.goto(url, {
-      waitUntil: "networkidle0",
+      waitUntil: "networkidle2",
       timeout: 60000
     })
     const title = await page.$eval(".article-title", (el) => el.innerText)
@@ -174,7 +181,6 @@ async function scrapeArticleRU(browser, url) {
 // 🔹 Main function
 async function runAllScrapers() {
   const browser = await puppeteer.launch({
-    executablePath,
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"]
   })
