@@ -3,21 +3,6 @@ const Pool = require("es6-promise-pool")
 const rng = require("seedrandom")
 const { firestore } = require("./firebase") // ⚠️ Usa Firestore SDK Cloud
 
-const launchBrowser = async () => {
-  const isRender = process.env.RENDER === "true"
-  const executablePath = isRender
-    ? process.env.PUPPETEER_EXECUTABLE_PATH
-    : undefined // Lascia Puppeteer decidere in locale
-
-  const browser = await puppeteer.launch({
-    executablePath,
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"]
-  })
-
-  return browser
-}
-
 // Helper per evitare duplicati
 async function getExistingIds() {
   const snapshot = await firestore.collection("posts").get()
@@ -38,13 +23,19 @@ function createPromiseProducer(browser, urls, scrapeArticle) {
 // 🔹 Calcio & Finanza + Sport & Finanza
 async function scrapeCF(browser, dbIds, urls) {
   const page = await browser.newPage()
-  await page.goto("https://www.calcioefinanza.it/")
+  await page.goto("https://www.calcioefinanza.it/", {
+    waitUntil: "networkidle0",
+    timeout: 60000
+  })
   const urlsCF = await page.$$eval("article>a", (els) => els.map((e) => e.href))
   const titlesCF = await page.$$eval(".post-title", (els) =>
     els.map((e) => e.innerText)
   )
 
-  await page.goto("https://www.sportefinanza.it/")
+  await page.goto("https://www.sportefinanza.it/", {
+    waitUntil: "networkidle0",
+    timeout: 60000
+  })
   const urlsSF = await page.$$eval("article>a", (els) => els.map((e) => e.href))
   const titlesSF = await page.$$eval(".post-title", (els) =>
     els.map((e) => e.innerText)
@@ -63,7 +54,10 @@ async function scrapeCF(browser, dbIds, urls) {
 async function scrapeArticleCF(browser, url) {
   const page = await browser.newPage()
   try {
-    await page.goto(url, { waitUntil: "networkidle0" })
+    await page.goto(url, {
+      waitUntil: "networkidle0",
+      timeout: 60000
+    })
     const title = await page.$eval(".a-title>h1", (el) => el.innerText)
     const date = await page.$eval(".a-date>time", (el) => el.dateTime)
     const author = "Sport & Finanza"
@@ -114,7 +108,11 @@ async function scrapeRU(browser, dbIds, urls) {
     for (let pageNum = 1; pageNum <= 10; pageNum++) {
       const page = await browser.newPage()
       await page.goto(
-        `https://www.rivistaundici.com/category/${category}/page/${pageNum}`
+        `https://www.rivistaundici.com/category/${category}/page/${pageNum}`,
+        {
+          waitUntil: "networkidle0",
+          timeout: 60000
+        }
       )
       const currentUrls = await page.$$eval(".article-title", (els) =>
         els.map((el) => el.href)
@@ -135,7 +133,10 @@ async function scrapeRU(browser, dbIds, urls) {
 async function scrapeArticleRU(browser, url) {
   const page = await browser.newPage()
   try {
-    await page.goto(url, { waitUntil: "networkidle0" })
+    await page.goto(url, {
+      waitUntil: "networkidle0",
+      timeout: 60000
+    })
     const title = await page.$eval(".article-title", (el) => el.innerText)
     const dateText = await page.$eval(".article-datetime", (el) => el.innerText)
     const author = "Rivista Undici"
@@ -172,7 +173,11 @@ async function scrapeArticleRU(browser, url) {
 
 // 🔹 Main function
 async function runAllScrapers() {
-  const browser = await launchBrowser()
+  const browser = await puppeteer.launch({
+    executablePath,
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+  })
 
   const dbIds = await getExistingIds()
 
