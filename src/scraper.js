@@ -190,14 +190,3 @@ module.exports = { runAllScrapers }
 
 // Run the function immediately (if needed)
 // runAllScrapers()
-
-// 🕐 Ogni ora: chiama /update
-cron.schedule("0 * * * *", async () => {
-  try {
-    console.log("🔁 Cron job avviato - chiamata a /update")
-    const response = await axios.get("http://localhost:4000/update")
-    console.log("✅ Update completato:", response.data)
-  } catch (err) {
-    console.error("❌ Errore nel cron job:", err.message)
-  }
-})
