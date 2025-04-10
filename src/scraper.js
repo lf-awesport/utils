@@ -158,11 +158,13 @@ async function scrapeArticleRU(browser, url) {
 
 // 🔹 Main function
 async function runAllScrapers() {
+  console.log("📍 Chromium path:", chromium.path)
+
   const browser = await puppeteer.launch({
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(),
-    headless: chromium.headless,
+    executablePath: chromium.path,
+    headless: true,
     args: ["--no-sandbox"]
   })
 
