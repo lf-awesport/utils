@@ -1,0 +1,13 @@
+name: Ping /test endpoint
+
+on:
+  schedule:
+    - cron: '*/3 * * * *' # ogni minuto
+  workflow_dispatch:
+
+jobs:
+  ping-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /test endpoint
+        run: curl -s -X GET https://dashboard-backend-six-pi.vercel.app/test
