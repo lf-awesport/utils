@@ -1,8 +1,22 @@
-const puppeteer = require("puppeteer-core")
-const chromium = require("chromium")
+const puppeteer = require("puppeteer")
 const Pool = require("es6-promise-pool")
 const rng = require("seedrandom")
 const { firestore } = require("./firebase") // ⚠️ Usa Firestore SDK Cloud
+
+const launchBrowser = async () => {
+  const isRender = process.env.RENDER === "true"
+  const executablePath = isRender
+    ? process.env.PUPPETEER_EXECUTABLE_PATH
+    : undefined // Lascia Puppeteer decidere in locale
+
+  const browser = await puppeteer.launch({
+    executablePath,
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+  })
+
+  return browser
+}
 
 // Helper per evitare duplicati
 async function getExistingIds() {
@@ -158,15 +172,7 @@ async function scrapeArticleRU(browser, url) {
 
 // 🔹 Main function
 async function runAllScrapers() {
-  console.log("📍 Chromium path:", chromium.path)
-
-  const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
-    executablePath: chromium.path,
-    headless: true,
-    args: ["--no-sandbox"]
-  })
+  const browser = await launchBrowser()
 
   const dbIds = await getExistingIds()
 
