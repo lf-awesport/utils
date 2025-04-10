@@ -36,7 +36,7 @@ app.get("/update", async (req, res) => {
   try {
     await unifiedScraper()
     await processArticles()
-    await batchUpdateRecommendations()
+    // await batchUpdateRecommendations()
     res.status(200).send("✅ Update complete!")
   } catch (error) {
     console.error("❌ Error during update:", error)
@@ -46,9 +46,7 @@ app.get("/update", async (req, res) => {
 
 // 🧪 Test endpoint
 app.get("/test", (req, res) => {
-  if (req.query.key !== process.env.CRON_SECRET) {
-    return res.status(403).send("Forbidden")
-  }
+  console.log("✅ Test endpoint hit at", new Date().toISOString())
   res.send("✅ Server is running correctly!")
 })
 
@@ -58,19 +56,5 @@ if (require.main === module) {
     console.log("Server listening on port 4000")
   })
 }
-
-// 🔁 Esegui aggiornamento ogni 12 ore (alle 00:00 e alle 12:00)
-cron.schedule("0 */12 * * *", async () => {
-  console.log("🕒 Cron job started: updating articles + embeddings")
-  try {
-    await unifiedScraper()
-    await processArticles()
-    //TODO RE Enable
-    // await batchUpdateRecommendations()
-    console.log("✅ Cron job completed")
-  } catch (e) {
-    console.error("❌ Cron job error:", e)
-  }
-})
 
 module.exports = app
