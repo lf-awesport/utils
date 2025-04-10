@@ -19,9 +19,11 @@
     "find-config": "^1.0.0",
     "json-server": "^1.0.0-beta.1",
     "jsonrepair": "^3.8.0",
-    "node-cron": "^3.0.3",
     "puppeteer": "^22.15.0",
     "seedrandom": "^3.0.5",
     "serverless-http": "^3.2.0"
+  },
+  "scripts": {
+    "start": "node server.js"
   }
 }
