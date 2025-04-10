@@ -4,11 +4,11 @@ const cors = require("cors")
 const {
   processArticles,
   batchUpdateRecommendations
-} = require("./embeddings.js")
+} = require("./src/embeddings.js")
 
-const { queryRAG } = require("./queryRAG.js")
+const { queryRAG } = require("./src/queryRAG.js")
 
-const { unifiedScraper } = require("./scraper.js")
+const { unifiedScraper } = require("./src/scraper.js")
 
 const app = express()
 app.use(cors())
