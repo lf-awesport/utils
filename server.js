@@ -11,7 +11,7 @@ const {
 
 const { queryRAG } = require("./src/queryRAG.js")
 
-const { unifiedScraper } = require("./src/scraper.js")
+const { runAllScrapers } = require("./src/scraper.js")
 
 const app = express()
 app.use(cors())
@@ -33,7 +33,7 @@ app.post("/askAgent", async (req, res) => {
 // 📦 Aggiorna articoli (scraping + analisi + embeddings)
 app.get("/update", async (req, res) => {
   try {
-    await unifiedScraper()
+    await runAllScrapers()
     // await processArticles()
     // await batchUpdateRecommendations()
     res.status(200).send("✅ Update complete!")
@@ -57,7 +57,7 @@ if (require.main === module) {
 }
 
 // 🕐 Ogni ora: chiama /update
-cron.schedule("20 * * * *", async () => {
+cron.schedule("25 * * * *", async () => {
   try {
     console.log("🔁 Cron job avviato - chiamata a /update")
     const response = await axios.get(
