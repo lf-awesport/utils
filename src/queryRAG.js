@@ -15,47 +15,116 @@ const vertex_ai = createVertex({
   }
 })
 
-async function queryRAG(userQuestion) {
-  // 1. Embedding della domanda
+/**
+ * 🔠 Genera l'embedding di una query testuale con Vertex AI
+ * @param {string} text - Testo della query da trasformare in embedding
+ * @returns {Promise<number[]>} - Vettore embedding
+ */
+async function generateQueryEmbedding(text) {
   const { embedding } = await embed({
     model: vertex_ai.textEmbeddingModel(process.env.EMBEDDING_MODEL),
-    value: userQuestion
+    value: text
   })
-
-  // 2. Query semantica su Firestore Vector Search
-  const snapshot = await firestore
-    .collection("sentiment")
-    .findNearest({
-      vectorField: "embedding",
-      queryVector: embedding,
-      limit: 10,
-      distanceMeasure: "COSINE"
-    })
-    .get()
-
-  const articles = []
-  snapshot.forEach((doc) => {
-    const data = doc.data()
-    articles.push(data)
-  })
-
-  // 3. Costruzione contesto
-  const context = articles
-    .map((a) => {
-      return `
-TITOLO: ${a.title}
-AUTORE: ${a.author}
-DATA: ${a.date}
-TAGS: ${Array.isArray(a.tags) ? a.tags.join(", ") : ""}
-ESTRATTO: ${a.excerpt}
-BODY: ${a.analysis?.cleanText || ""}
-`
-    })
-    .join("\n-----------------------------\n")
-
-  // 4. Chiamata a Gemini con il prompt
-  const result = await summarizeContent(context, askAgentPrompt(userQuestion))
-  return result
+  return embedding
 }
 
-module.exports = { queryRAG }
+/**
+ * 🔍 Ricerca documenti simili in Firestore Vector Search (con tutti i campi)
+ * @param {Object} options
+ * @param {string} options.collectionName - Nome della collezione (es. "sentiment")
+ * @param {number[]} options.queryVector - L'embedding della query (es. da Vertex AI)
+ * @param {string} [options.vectorField="embedding"] - Campo dell'embedding nel documento
+ * @param {string} [options.distanceMeasure="COSINE"] - COSINE | EUCLIDEAN | DOT_PRODUCT
+ * @param {number} [options.limit=25] - Numero massimo di risultati
+ * @param {number} [options.distanceThreshold] - Soglia sulla distanza (dipende dal tipo)
+ * @param {Array<{ field: string, op: FirebaseFirestore.WhereFilterOp, value: any }>} [options.filters] - Eventuali filtri Firestore
+ * @returns {Promise<Array<{ id: string, data: any, vector_distance?: number }>>}
+ */
+async function searchSimilarDocuments({
+  collectionName,
+  queryVector,
+  vectorField = "embedding",
+  distanceMeasure = "COSINE",
+  limit = 25,
+  distanceThreshold,
+  filters = []
+}) {
+  try {
+    let coll = firestore.collection(collectionName)
+
+    // Applica eventuali filtri
+    for (const filter of filters) {
+      coll = coll.where(filter.field, filter.op, filter.value)
+    }
+
+    // Costruzione query vettoriale
+    const vectorQuery = coll.findNearest({
+      vectorField,
+      queryVector,
+      limit,
+      distanceMeasure,
+      distanceResultField: "vector_distance",
+      ...(distanceThreshold !== undefined ? { distanceThreshold } : {})
+    })
+
+    const snapshot = await vectorQuery.get()
+
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      data: { ...doc.data(), vector_distance: doc.get("vector_distance") }
+    }))
+  } catch (error) {
+    console.error("❌ Errore in searchSimilarDocuments:", error)
+    throw error
+  }
+}
+
+async function queryRAG(userQuestion) {
+  // 1. Embedding della domanda
+  const embedding = await generateQueryEmbedding(userQuestion)
+
+  // 2. Vector search
+  const results = await searchSimilarDocuments({
+    collectionName: "sentiment",
+    queryVector: embedding,
+    distanceMeasure: "COSINE",
+    limit: 25
+  })
+
+  // 3. Costruzione contesto per Gemini
+  const context = results
+    .map(
+      ({ data }) => `
+TITOLO: ${data.title}
+AUTORE: ${data.author}
+DATA: ${data.date}
+TAGS: ${Array.isArray(data.tags) ? data.tags.join(", ") : ""}
+ESTRATTO: ${data.excerpt}
+BODY: ${data.analysis?.cleanText || ""}
+SCORE: ${(data.vector_distance || 0).toFixed(4)}
+    `
+    )
+    .join("\n-----------------------------\n")
+
+  // 4. Chiamata a Gemini
+  const text = await summarizeContent(context, askAgentPrompt(userQuestion))
+
+  // 5. Costruzione array di sources senza il campo BODY
+  const sources = results.map(({ id, data }) => {
+    const { analysis, ...rest } = data
+    const { cleanText, ...analysisRest } = analysis || {}
+    return {
+      id,
+      ...rest,
+      analysis: analysisRest
+    }
+  })
+
+  return { text, sources }
+}
+
+module.exports = {
+  queryRAG,
+  searchSimilarDocuments,
+  generateQueryEmbedding
+}

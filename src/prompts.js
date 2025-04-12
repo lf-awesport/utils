@@ -59,61 +59,6 @@ Return a valid json object:
 
 module.exports.summarizePrompt = summarizePrompt
 
-const dailySummaryPrompt = `Objective: You are a world-class copywriter tasked with creating a daily summary article for sport managers. Your audience comprises professionals who need to stay informed with daily sports news quickly and efficiently.
-
-Company: AWE Sport Education
-Mission: AWE Sport Education is dedicated to industry education and professionalization. We believe education is a tool for development and equality, capable of driving positive change.
-
-Goals:
-
-Educate Your Audience: Provide valuable insights that enhance the knowledge and skills of sport managers.
-Raise Brand Awareness: Reinforce AWE Sport Education’s position as a leader in sports industry education.
-Step-by-Step Instructions:
-
-Compile Relevant News Articles:
-
-Identify and compile daily sports news articles that are most relevant to sport managers.
-Briefly explain why each article is important for sport managers to know.
-Summarize Key Articles:
-
-For each article, write a concise summary that captures the key message and educational value for sport managers.
-Highlight significant quotes, data, or facts that add value or interest.
-Create a Structured Outline:
-
-Introduction:
-Craft an engaging introduction that briefly outlines the main topics of the daily summary.
-Ensure it is relevant and captivating for sport managers.
-Main Content:
-Organize the main content into paragraphs.
-Provide detailed insights, analysis, and unique perspectives on each topic.
-Conclusion:
-Conclude with a strong closing statement that ties all the news together.
-Offer a final reflection that reinforces the key takeaways.
-Maintain Brand Consistency:
-
-Ensure that the copy aligns with AWE Sport Education’s personality, values, and identity.
-Keep the tone professional, informative, and engaging, resonating with sport managers.
-Write the Final Content in Italian:
-
-Ensure the content is grammatically correct, easy to understand, and impactful.
-Escape any quotes and special characters; ensure both the title and content are returned as strings.
-Return the Final Content as a Valid JSON Object:
-
-json
-[
-  {
-    "title": "Your Paragraph Title Here",
-    "content": "Your Content Here"
-  },
-  {
-    "title": "Your Next Paragraph Title",
-    "content": "Your Next Content"
-  }
-]
-`
-
-module.exports.dailySummaryPrompt = dailySummaryPrompt
-
 const sentimentAnalysisPrompt = `Please analyze the following text and provide a detailed JSON response that includes the following aspects:
 Readability Analysis: Determine the readability level of the text, using metrics such as the Flesch-Kincaid score or other readability indices.
 Bias Detection: Identify any potential bias present in the article, such as political bias or agenda-driven content. Indicate the type and degree of bias detected.
@@ -252,60 +197,6 @@ json
 `
 
 module.exports.sentimentAnalysisPrompt = sentimentAnalysisPrompt
-
-const highlightPrompt = `Objective: You are an expert in content optimization, responsible for enhancing the readability and impact of a slide by identifying key words or short phrases to highlight. Your goal is to make the slide content more engaging and easier to understand, emphasizing the most critical information.
-
-Instructions:
-
-Analyze the Content:
-
-Carefully review the provided slide content. Identify the most crucial words, short phrases, or concise sentences that convey the core message of the slide.
-Highlight Selection Criteria:
-
-Core Concepts: Select terms or short phrases that are central to the slide's primary message or theme.
-Actionable Advice: Highlight any actionable advice, steps, or recommendations that the audience should remember.
-Critical Data: If the slide includes data, figures, or statistics, highlight the most impactful numbers or facts that reinforce the message.
-Industry-Specific Keywords: Focus on highlighting industry-specific terms, names, or jargon that should stand out to the reader.
-Exclusions: Do not highlight transition words, filler phrases, or any language that simply guides the flow of content without adding substantive meaning (e.g., "therefore," "however," "in conclusion").
-Limit the Highlights:
-
-Choose a limited number of words, short phrases, or concise sentences (up to 4 words each) to avoid overwhelming the slide. Prioritize the most impactful choices that will enhance comprehension and visual emphasis.
-If no significant keywords or phrases are identified in the slide, return an empty array.
-Output Format:
-
-Return the selected words or short phrases in an array format, ordered by their importance for maximum impact.
-Return Format:
-
-json
-[
-  "Key word or phrase 1",
-  "Key word or phrase 2",
-  "Key word or phrase 3"
-]
-Example:
-
-Input Slide Content: "Ronaldo batte Messi anche su YouTube: 20 milioni di iscritti in un giorno! Cristiano Ronaldo ha lanciato il suo canale YouTube, raggiungendo oltre 20 milioni di iscritti in un solo giorno. Questo successo consolida la sua posizione come il calciatore più popolare su YouTube e sui social media in generale. Il canale di Ronaldo ha superato in poche ore il numero di iscritti del canale di Lionel Messi (2,2 milioni) e Neymar (4,6 milioni), dimostrando ancora una volta la sua immensa popolarità. Con un totale di 947,6 milioni di follower su tutti i social media, Ronaldo si avvicina sempre di più al traguardo del miliardo. Questo successo è dovuto alla sua straordinaria carriera calcistica e alla sua capacità di connettersi con i fan in tutto il mondo. Il successo di Ronaldo sui social media dimostra l'importanza del brand building e della gestione della propria immagine nel mondo dello sport. I manager sportivi devono essere consapevoli del potere dei social media e imparare a sfruttarlo a proprio vantaggio. Vuoi saperne di più sul marketing sportivo e sulla gestione dell'immagine dei calciatori? Visita il sito web di AWE Sport Education per scoprire i nostri corsi e le nostre risorse."
-
-Output:
-
-json
-{
-  "highlights": [
-    "Ronaldo batte Messi",
-    "20 milioni di iscritti",
-    "lanciato il suo canale YouTube",
-    "calciatore più popolare",
-    "superato in poche ore",
-    "947,6 milioni di follower",
-    "straordinaria carriera calcistica",
-    "brand building",
-    "potere dei social media"
-  ]
-}
-
-`
-
-module.exports.highlightPrompt = highlightPrompt
 
 const askAgentPrompt = (question) => `
 Sei un esperto di sport, finanza sportiva e management sportivo.
