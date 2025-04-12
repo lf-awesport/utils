@@ -35,6 +35,7 @@ const processArticles = async () => {
 
     const alreadyDone = new Set()
     sentimentSnap.forEach((doc) => alreadyDone.add(doc.id))
+    console.log(alreadyDone.size)
 
     for (const post of postsSnap.docs) {
       const postId = post.id
@@ -103,67 +104,7 @@ ${JSON.stringify(analysis)}
   }
 }
 
-async function batchUpdateRecommendations() {
-  try {
-    console.log("📥 Fetching all articles from Firestore...")
-
-    const sentimentSnap = await firestore.collection("sentiment").get()
-    const articles = sentimentSnap.docs
-
-    for (const doc of articles) {
-      const articleId = doc.id
-      const articleData = doc.data()
-
-      if (!articleData.embedding) {
-        console.warn(`⚠️ Skipping ${articleId}: no embedding`)
-        continue
-      }
-
-      console.log(`🔍 Searching related articles for ${articleId}`)
-
-      const vectorQuery = firestore.collection("sentiment").findNearest({
-        vectorField: "embedding",
-        queryVector: articleData.embedding,
-        limit: 10,
-        distanceMeasure: "COSINE"
-      })
-
-      const resultsSnap = await vectorQuery.get()
-
-      const relatedArticles = []
-
-      resultsSnap.forEach((matchDoc) => {
-        if (matchDoc.id !== articleId) {
-          const matchData = matchDoc.data()
-          relatedArticles.push({
-            id: matchDoc.id,
-            title: matchData.title,
-            //TODO FIX
-            similarity:
-              matchDoc.distance != null
-                ? Math.round((1 - matchDoc.distance) * 1000) / 1000
-                : null
-          })
-        }
-      })
-
-      // Salva solo i top 10
-      await firestore
-        .collection("sentiment")
-        .doc(articleId)
-        .set({ relatedArticles: relatedArticles.slice(0, 10) }, { merge: true })
-
-      console.log(`✅ Saved recommendations for ${articleId}`)
-    }
-
-    console.log("🎉 All recommendations updated!")
-  } catch (error) {
-    console.error("❌ Error in batchUpdateRecommendations:", error)
-  }
-}
-
-module.exports = { processArticles, batchUpdateRecommendations }
+module.exports = { processArticles }
 
 // Run the function immediately (if needed)
 // processArticles()
-// batchUpdateRecommendations()
