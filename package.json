@@ -23,8 +23,5 @@
     "puppeteer": "^24.6.1",
     "seedrandom": "^3.0.5",
     "serverless-http": "^3.2.0"
-  },
-  "scripts": {
-    "start": "node server.js"
   }
 }
