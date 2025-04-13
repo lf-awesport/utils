@@ -1,0 +1,22 @@
+name: Scheduled Update
+
+on:
+  schedule:
+    # Run every day at 1:31 and 13:31 UTC (i.e. every 12 hours)
+    - cron: '31 1,13 * * *'
+  workflow_dispatch: # Allows manual trigger of the workflow
+
+jobs:
+  update-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call update endpoint
+        run: |
+          echo "Calling update endpoint..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "https://utils-r1ls.onrender.com/update")
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "Update endpoint returned error: $RESPONSE"
+            exit 1
+          else
+            echo "Update successful."
+          fi

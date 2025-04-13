@@ -1,7 +1,5 @@
 const express = require("express")
 const cors = require("cors")
-const axios = require("axios")
-const cron = require("node-cron")
 require("dotenv").config({ path: require("find-config")(".env") })
 
 const { processArticles } = require("./src/embeddings.js")
@@ -66,7 +64,7 @@ app.post("/search", async (req, res) => {
       collectionName: "sentiment",
       queryVector: embedding,
       distanceMeasure: "COSINE",
-      limit: 25,
+      limit: 15,
       filters: parsedFilters
     })
 
@@ -107,18 +105,5 @@ if (require.main === module) {
     console.log("Server listening on port 4000")
   })
 }
-
-// 🕐 Ogni ora: chiama /update
-cron.schedule("31 1,13 * * *", async () => {
-  try {
-    console.log("🔁 Cron job avviato - chiamata a /update")
-    const response = await axios.get(
-      `${process.env.NEXT_PUBLIC_API_URL}/update`
-    )
-    console.log("✅ Update completato:", response.data)
-  } catch (err) {
-    console.error("❌ Errore nel cron job:", err.message)
-  }
-})
 
 module.exports = app
