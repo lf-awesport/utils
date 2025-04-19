@@ -104,7 +104,78 @@ ${JSON.stringify(analysis)}
   }
 }
 
-module.exports = { processArticles }
+const reprocessSentimentAnalysis = async (postId) => {
+  try {
+    const postRef = firestore.collection("posts").doc(postId)
+    const postSnap = await postRef.get()
+
+    if (!postSnap.exists) {
+      throw new Error(`Articolo ${postId} non trovato in 'posts'`)
+    }
+
+    const postData = postSnap.data()
+    console.log(`🔁 Re-processing article: ${postId}`)
+
+    // 1. Analisi semantica
+    const analysis = await summarizeContent(
+      postData.body,
+      sentimentAnalysisPrompt
+    )
+
+    if (!analysis || !analysis.analisi_leggibilita) {
+      throw new Error("Analisi assente o incompleta")
+    }
+
+    // 2. Testo per embedding
+    const fullText = `
+TITOLO: ${postData.title}
+AUTORE: ${postData.author}
+DATA: ${postData.date}
+TAGS: ${Array.isArray(analysis?.tags) ? analysis.tags.join(", ") : ""}
+ESTRATTO: ${postData.excerpt}
+BODY: ${postData.body}
+---
+ANALISI:
+${JSON.stringify(analysis)}
+`.trim()
+
+    // 3. Genera embedding
+    const { embedding } = await embed({
+      model: vertex_ai.textEmbeddingModel(process.env.EMBEDDING_MODEL),
+      value: fullText
+    })
+
+    // 4. Scrivi su Firestore (sovrascrive l’esistente)
+    const updatedDoc = {
+      id: postId,
+      embedding: FieldValue.vector(embedding),
+      analysis,
+      prejudice: analysis?.rilevazione_di_pregiudizio?.grado_di_pregiudizio,
+      readability: analysis?.analisi_leggibilita?.punteggio_flesch_kincaid,
+      tags: analysis?.tags,
+      url: postData.url,
+      excerpt: postData.excerpt,
+      imgLink: postData.imgLink,
+      title: postData.title,
+      date: postData.date,
+      author: postData.author
+    }
+
+    await firestore.collection("sentiment").doc(postId).set(updatedDoc, {
+      merge: true
+    })
+
+    console.log(`✅ Reprocessed and updated: ${postId}`)
+  } catch (error) {
+    console.error(
+      `❌ Errore durante il reprocesso di ${postId}:`,
+      error.message
+    )
+  }
+}
+
+module.exports = { processArticles, reprocessSentimentAnalysis }
 
 // Run the function immediately (if needed)
-// processArticles()
+processArticles()
+// reprocessSentimentAnalysis("0.9933352702832035")

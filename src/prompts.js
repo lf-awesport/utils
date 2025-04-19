@@ -1,218 +1,164 @@
-const summarizePrompt = `
-**Objective:**
-You are a world-class copywriter creating LinkedIn carousels for sport managers. Your audience consists of professionals who want to consume daily sports news in a short time and in a convenient manner.
-
-**Company:** AWE Sport Education  
-**Mission:** AWE Sport Education is a business line entirely dedicated to industry education and professionalization. We believe in education as a tool for development and equality, capable of bringing change and making a positive impact.
-
-**Goals:**
-- Educate your audience.
-- Raise brand awareness.
-
-Identify all person and brand names mentioned in the input and look them up on wikipedia.
-Then explain why this article is relevant to sport managers
-then use all the information to create:
-
-**Content Outline:**
-1. Hook introduction slide (headline only).
-3. Explanation and analysis (3-4 slides maximum).
-4. Strong ending statement, wrapping up the educational content.
-4. 1 Call to action slide to engage with AWE Sport Education's audience.
+const sentimentAnalysisPrompt = `
+Please analyze the following text and provide a detailed JSON response that includes the following aspects.
+Write all the final content in Italian. Ensure the text is grammatically correct, clearly structured, and impactful. Escape quotes and special characters. The output must be a valid JSON object with the following fields:
 
 ---
 
-**Step-by-Step Instructions:**
-1. **Create a Captivating Hook:**
-   - The first slide is crucial. Use a catchy headline related to the news, a provocative question, a surprising fact, or a compelling benefit to grab attention. Make it clear, very concise (max 4-5 words), and aligned with your goal.
+🔎 **analisi_leggibilita**
+Determine the readability level of the text using metrics such as the Flesch-Kincaid score (range 0–100, where higher means easier) and estimate the average reading time in minutes.
+Provide a short explanation that justifies the score by referring to sentence length, vocabulary complexity, and overall text structure.
 
-2. **Extract the Key Message:**
-   - From the news article, derive a key message or theme that is educational or insightful for sport managers. This will be your central point for the carousel.
-
-3. **Explain and Analyze:**
-   - Create 3-5 slides that provide an in-depth explanation and analysis of the key message. Use data, quotes, analysis, or practical advice that ties back to the original news. Ensure clear transitions between slides.
-
-4. **Keep it In-depth:**
-   - Explain the news, providing in-depth insights, analysis and unique perspectives. You want to provide value to skilled and knowledgeble professionals.
-
-5. **Be Consistent:**
-   - Maintain consistency in your brand voice, tone, and style without sounding like AI. Your copy should reflect AWE Sport Education's personality, values, and identity, resonating with your target audience. Ensure the copy matches the overall theme of your carousel.
-
-6. **Reasonable Length:**
-   - Maintain In-depth analysis withouth printing too much text, everything should be readable and look decent in a slide 1080x1350px big. Not too full, not too empty.
-
-7. **Call to Action:**
-   - End with a clear call to action, inviting your audience to engage with AWE Sport Education. This could be visiting the website, signing up for a newsletter, or joining a course.
 ---
 
-By starting with relevant sports news and providing detailed explanations and analysis, you will create engaging and informative LinkedIn carousels that resonate with sport managers and elevate AWE Sport Education's brand presence.
-Avoid Hashtags and emojis.
-Output in italian, escape quotes and other characters.
+⚖️ **rilevazione_di_pregiudizio**
+Identify any potential bias present in the article.
+Indicate:
+- tipo_di_pregiudizio:  
+  1 = Politico  
+  2 = Culturale  
+  3 = Economico  
+  4 = Sociale  
+  5 = Altro  
+- grado_di_pregiudizio: from 0 (neutral) to 100 (strong bias)
+Explain the nature and reasoning behind the detected bias, or explain why the text is considered neutral.
 
-Return a valid json object: 
- [
-    { 
-      "content",
-    ...
- ]
-}
-`
+---
 
-module.exports.summarizePrompt = summarizePrompt
+🎭 **rilevazione_emozioni**
+Identify the primary emotions conveyed by the article. Assign a percentage (0–100) for each of the following:
+- gioia, tristezza, rabbia, paura, sorpresa  
+Provide a short summary that explains the emotional tone of the article and how the emotions are expressed in the text.
 
-const sentimentAnalysisPrompt = `Please analyze the following text and provide a detailed JSON response that includes the following aspects:
-Readability Analysis: Determine the readability level of the text, using metrics such as the Flesch-Kincaid score or other readability indices.
-Bias Detection: Identify any potential bias present in the article, such as political bias or agenda-driven content. Indicate the type and degree of bias detected.
-Emotion Detection: Identify the specific emotions conveyed in the article, such as joy, sadness, anger, fear, etc., and provide their intensity levels.
-Tags: assign one or more tags strictly from the provided sports-related categories. Each article should be tagged based on the primary topics it covers, with a focus on precise classification. Use only the categories from the list below:
+---
 
-Categories: only the following: [Sports Law, Finance, Esport, Event Management, Marketing, Sponsorship, Sport for Good, Sport Equipment, Sport Tourism, Media, Fan Experience]
+🏷️ **tags**
+Assign one or more tags strictly from the following sports-related categories. Only use relevant tags based on the main content of the article.
 
-Sports Law:
-Organisation and structure of the ICAS and CAS
-World Anti-Doping Agency (WADA)
-Match-fixing and corruption in sports
-Code of Sports-related Arbitration
-Compliance and Anti-Doping Regulations
-FIFA Compliance Programme
+Valid categories:
+[Sports Law, Finance, Esport, Event Management, Marketing, Sponsorship, Sport for Good, Sport Equipment, Sport Tourism, Media, Fan Experience]
 
-Finance:
-Financial reporting and management
-Accounting in sport
-Statutory financial requirements in sport
-Financial risk management
-Club financial management
-Financial Fair Play
+---
 
-Esport:
-eSport World and stakeholders
-eSport marketing
-Sponsorship in eSport
-eSport events and tournaments
-eSport and education
-Legal aspects of eSport
+🧠 **takeaways**
+Read the article and extract exactly 5 impactful, concise insights.  
+Each takeaway must:
+- Be a complete sentence in Italian.
+- Capture a key point, observation, or strategic implication.
+- Be useful and relevant to professionals in the sport business sector.
 
-Event Management:
-Sport event planning and strategy
-Organisational structure for sports events
-Financial planning for events
-Venue and facilities management
-Risk and security management
+---
 
-Fan Experience:
-Fan classification and loyalty
-Fan engagement strategies
-Digital fan experience and new technologies
-Artificial Intelligence (AI) and sports
-Ticketing and membership
+🧹 **cleanText**
+Generate a cleaned version of the article, suitable for building a word cloud:
+- Remove all articles, prepositions, quotes, special characters, conjunctions, pronouns, and common stop words.
+- Remove all words that occur only once.
+- Normalize words (e.g., lowercase, singular).
+- Return a single string containing only the most meaningful and relevant words separated by spaces.
 
-Sport Tourism:
-Event sport tourism (e.g., Olympics, FIFA World Cup)
-Active sport tourism (winter/summer destinations)
-Nostalgia sport tourism
+---
 
-Sport Equipment:
-Sports equipment market and technology
-Wearable technology in sports
-Smart sport equipment
+📈 **Metadati per RAG avanzato**
+Please extract the following fields to improve search, filtering, and generation quality in AI-based systems:
 
-Marketing:
-Sport marketing strategies
-Experiential marketing
-Branding and fan experience
+- scopo: communicative intent of the article (es: "informare", "educare", "analizzare", "promuovere")
+- tesi_principale: the main thesis or key message of the article, in one full sentence
+- concetti_chiave: array of 3–5 recurring or significant concepts from the article
+- orizzonte_temporale: either "passato", "attualità", or "futuro"
+- dominio: the main domain covered (e.g., "Sport Business", "Marketing", "Tecnologia", "Legge")
 
-Sponsorship:
-Sponsorship models in sport
-Technical sponsorship
-Commercial activations
+- tipo_contenuto: the rhetorical or editorial format (e.g., "notizia", "approfondimento", "analisi", "editoriale", "opinione", "intervista")
+- contesto_geografico: the geographic area discussed (e.g., "Italia", "Europa", "globale")
+- validita_temporale: how long the insights will remain relevant ("breve termine", "medio termine", "lungo termine")
+- target_audience: the intended audience (e.g., "executive", "marketer", "organizzatore eventi", "atleti")
+- entita_rilevanti: array of people, organizations or clubs mentioned (e.g., ["FIFA", "Spotify", "FC Barcelona"])
 
-Media:
-Sports media and broadcasting
-Digital media in sport (OTT platforms)
-Social media management for sports
+---
 
-Sport for Good:
-Ethical practices in sport
-Sport and social impact
-Sport for development initiatives
+📦 **Output Format (JSON)**
 
-Identify Key Takeaways:
-Thoroughly read the provided article content. Focus on understanding the central theme, key points, and any actionable advice or conclusions drawn by the author.
-Core Message: Extract the main idea or thesis of the article that encapsulates the overall purpose or argument.
-Essential Insights: Identify critical insights, observations, or findings that add value to the reader’s understanding of the topic.
-Actionable Advice: Highlight any steps, recommendations, or practical advice that the reader can implement.
-Supporting Data: Include any significant data, statistics, or examples that reinforce the article's points.
-Concluding Remarks: Capture the final thoughts or reflections that tie the article together, providing closure or a call to action.
-Output Format:
+Return a valid JSON object in the following format:
 
-Return the extracted key takeaways in a bullet point list format, ensuring each takeaway is concise and impactful.
-Limit the Takeaways:
-
-Aim for at least 3-5 takeaways, each consisting of a single sentence or a brief statement. Focus on quality over quantity to maintain clarity and relevance.
-
-Clean text: Please analyze the following text and remove all prepositions, articles, quotes, special caracters,conjunctions, words that are used only once and other common stop words (like "the," "and," "of," "in," etc.). Retain only the most meaningful and important words that convey the key information. The cleaned text should be suitable for generating a word cloud that highlights the primary topics and themes.
-
-
-Write the Final Content in Italian:
-
-Ensure the content is grammatically correct, easy to understand, and impactful.
-Escape any quotes and special characters;Return the Final Content as a Valid JSON Object:
-
-
-Example Output:
-
-json
 {
   "analisi_leggibilita": {
-    "punteggio_flesch_kincaid": [0-100],   // Range from 0 (very difficult) to 100 (very easy)
-    "tempo_di_lettura_minuti": [number],   // Estimated reading time in minutes
-    "spiegazione": "[Dettagli sull'analisi della leggibilità e su come i punteggi sono stati determinati.]"
+    "punteggio_flesch_kincaid": 76,
+    "tempo_di_lettura_minuti": 2,
+    "spiegazione": "Il testo presenta un linguaggio accessibile con frasi semplici e struttura lineare."
   },
   "rilevazione_di_pregiudizio": {
-    "tipo_di_pregiudizio": [1-5],           // 1: Politico, 2: Culturale, 3: Economico, 4: Sociale, 5: Altro
-    "grado_di_pregiudizio": [0-100],          // 0: Range from 0 (very low) to 100 (very high)
-    "spiegazione": "[Dettagli sulla rilevazione del pregiudizio, con una spiegazione del tipo e del grado di pregiudizio identificato.]"
+    "tipo_di_pregiudizio": 3,
+    "grado_di_pregiudizio": 18,
+    "spiegazione": "L’articolo enfatizza i benefici economici per le grandi leghe, minimizzando gli impatti sui piccoli club."
   },
-    tags: [
-    Sponsorship,
-    Marketing,
-    Esports...
-    ], 
-    takeaways: [
-  "Key word or phrase 1",
-  "Key word or phrase 2",
-  "Key word or phrase 3"
-  ],
-  cleanText: "The text with only important and relevant words."
   "rilevazione_emozioni": {
     "emozioni": {
-      "gioia": [0-100],                     // Percentuale di gioia (0-100)
-      "tristezza": [0-100],                 // Percentuale di tristezza (0-100)
-      "rabbia": [0-100],                    // Percentuale di rabbia (0-100)
-      "paura": [0-100],                     // Percentuale di paura (0-100)
-      "sorpresa": [0-100]                   // Percentuale di sorpresa (0-100)
+      "gioia": 35,
+      "tristezza": 5,
+      "rabbia": 10,
+      "paura": 15,
+      "sorpresa": 40
     },
-    "spiegazione": "[Dettagli sulla rilevazione delle emozioni e sulle percentuali associate a ciascuna emozione.]",
-    }
-  }
+    "spiegazione": "Il testo alterna ottimismo e incertezza, con enfasi su cambiamenti tecnologici e strategie future."
+  },
+  "tags": ["Marketing", "Media"],
+  "takeaways": [
+    "Le piattaforme OTT stanno ridefinendo i modelli di distribuzione dei contenuti sportivi.",
+    "Il valore delle sponsorship aumenta con format digitali più coinvolgenti.",
+    "L'adozione di AI nei media sportivi offre nuove opportunità di personalizzazione.",
+    "Le strategie di contenuto stanno superando il semplice broadcasting.",
+    "La misurazione dell'engagement è ora centrale nella valutazione del ROI."
+  ],
+  "cleanText": "piattaforme ott distribuzione contenuti sportivi sponsorship ai media engagement broadcasting personalizzazione strategia roi",
+  "scopo": "analizzare",
+  "tesi_principale": "Le tecnologie digitali stanno rivoluzionando il modo in cui lo sport viene distribuito, monetizzato e vissuto dai fan.",
+  "concetti_chiave": ["piattaforme OTT", "sponsorship", "AI", "personalizzazione", "ROI"],
+  "orizzonte_temporale": "attualità",
+  "dominio": "Sport Business",
+  "tipo_contenuto": "approfondimento",
+  "contesto_geografico": "globale",
+  "validita_temporale": "medio termine",
+  "target_audience": "marketer",
+  "entita_rilevanti": ["DAZN", "TikTok", "Serie A"]
+}
 `
 
 module.exports.sentimentAnalysisPrompt = sentimentAnalysisPrompt
 
 const askAgentPrompt = (question) => `
-Sei un esperto di sport, finanza sportiva e management sportivo.
+Rispondi alla seguente domanda agendo come un esperto di sport business:
 
-Rispondi alla domanda dell’utente in modo chiaro, approfondito e professionale.  
-La risposta deve essere ben argomentata, aggiornata e utile per chi lavora o studia nel mondo dello sport business.
+**Domanda:** ${question}
 
-Non citare *mai* le fonti e non includere i link diretti agli articoli o ai documenti da cui provengono le informazioni.
+---
 
+**Contesto disponibile:**  
+Hai accesso a una serie di articoli analizzati in profondità tramite strumenti di NLP. Ogni documento include informazioni sintetiche su:
+- Tesi principali e concetti chiave
+- Argomenti trattati e tag tematici
+- Emozioni e tono del contenuto
+- Entità rilevanti (organizzazioni, club, aziende)
+- Obiettivo comunicativo, target di riferimento, validità temporale
+- Estratto testuale e punteggio di similarità
 
-🧠 Domanda dell’utente:
-${question}
+---
 
-Rispondi in formato JSON nel seguente schema:
+**Istruzioni per Gemini:**
+• Agisci come un esperto di sport business.  
+• Considera che l'utente è un professionista del settore, con conoscenze di base, ma desideroso di approfondire.  
+• Sintetizza e confronta i contenuti degli articoli per costruire una risposta coerente e utile.  
+• Non citare le fonti testualmente, ma ragiona a partire dai concetti emersi.  
+• Spiega il ragionamento alla base delle tue affermazioni e collega i principi chiave dello sport business ai concetti presenti negli articoli.  
+• Mantieni un tono analitico e professionale, focalizzato su dati, strategie e implicazioni.  
+• Fornisci esempi, buone pratiche o possibili scenari, anche quando non esplicitamente richiesti.  
+• Anticipa eventuali domande di approfondimento e suggerisci temi correlati da esplorare.  
+• Inizia la risposta con una frase riassuntiva che esprima il concetto chiave.  
+• Struttura la risposta in modo chiaro, logico e leggibile.
+
+---
+
+**Rispondi in formato JSON** con questa struttura:
+
 {
-  "answer": "testo della risposta",
+  "answer": "Risposta completa, coerente e ben strutturata qui..."
 }
 `
 
