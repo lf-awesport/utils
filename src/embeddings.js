@@ -177,5 +177,5 @@ ${JSON.stringify(analysis)}
 module.exports = { processArticles, reprocessSentimentAnalysis }
 
 // Run the function immediately (if needed)
-processArticles()
+// processArticles()
 // reprocessSentimentAnalysis("0.9933352702832035")
