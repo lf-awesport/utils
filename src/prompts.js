@@ -13,12 +13,6 @@ Provide a short explanation that justifies the score by referring to sentence le
 ⚖️ **rilevazione_di_pregiudizio**
 Identify any potential bias present in the article.
 Indicate:
-- tipo_di_pregiudizio:  
-  1 = Politico  
-  2 = Culturale  
-  3 = Economico  
-  4 = Sociale  
-  5 = Altro  
 - grado_di_pregiudizio: from 0 (neutral) to 100 (strong bias)
 Explain the nature and reasoning behind the detected bias, or explain why the text is considered neutral.
 
@@ -62,12 +56,11 @@ Please extract the following fields to improve search, filtering, and generation
 
 - scopo: communicative intent of the article (es: "informare", "educare", "analizzare", "promuovere")
 - tesi_principale: the main thesis or key message of the article, in one full sentence
-- concetti_chiave: array of 3–5 recurring or significant concepts from the article
-- orizzonte_temporale: either "passato", "attualità", or "futuro"
+- concetti_chiave: array of 5 recurring or significant concepts from the article
 - dominio: the main domain covered (e.g., "Sport Business", "Marketing", "Tecnologia", "Legge")
 
 - tipo_contenuto: the rhetorical or editorial format (e.g., "notizia", "approfondimento", "analisi", "editoriale", "opinione", "intervista")
-- contesto_geografico: the geographic area discussed (e.g., "Italia", "Europa", "globale")
+- contesto_geografico: the geographic area discussed (e.g., "Italia", "Europa", "USA", "Asia"...)
 - validita_temporale: how long the insights will remain relevant ("breve termine", "medio termine", "lungo termine")
 - target_audience: the intended audience (e.g., "executive", "marketer", "organizzatore eventi", "atleti")
 - entita_rilevanti: array of people, organizations or clubs mentioned (e.g., ["FIFA", "Spotify", "FC Barcelona"])
@@ -111,7 +104,6 @@ Return a valid JSON object in the following format:
   "scopo": "analizzare",
   "tesi_principale": "Le tecnologie digitali stanno rivoluzionando il modo in cui lo sport viene distribuito, monetizzato e vissuto dai fan.",
   "concetti_chiave": ["piattaforme OTT", "sponsorship", "AI", "personalizzazione", "ROI"],
-  "orizzonte_temporale": "attualità",
   "dominio": "Sport Business",
   "tipo_contenuto": "approfondimento",
   "contesto_geografico": "globale",

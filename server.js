@@ -81,8 +81,13 @@ app.post("/search", async (req, res) => {
   }
 })
 
-// 📦 Aggiorna articoli (scraping + analisi + embeddings)
 app.get("/update", async (req, res) => {
+  const clientSecret = req.query.secret
+
+  if (clientSecret !== process.env.UPDATE_SECRET || !clientSecret) {
+    return res.status(401).send("🔒 Unauthorized: Invalid secret.")
+  }
+
   try {
     await runAllScrapers()
     await processArticles()

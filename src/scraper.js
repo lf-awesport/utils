@@ -24,23 +24,23 @@ function createPromiseProducer(browser, urls, scrapeArticle) {
 async function scrapeDirettaUrls(browser, dbIds, urls) {
   const categories = [
     "calcio",
-    "serie-a",
+    "serie-a/COuk57CiCdnS0XT8/",
     "tennis",
     "motori",
     "basket",
     "sport-invernali",
     "rugby",
     "ciclismo",
-    "sport-usa",
+    "sport-usa/dpUlsyANWSzc94ws/",
     "boxe",
     "atletica",
     "nuoto",
     "golf",
     "pallavolo",
     "padel",
-    "altri-sport",
-    "terzo-tempo",
-    "interviste-esclusive"
+    "altri-sport/Mq56jnAtWSzc94ws/",
+    "terzo-tempo/vwRW2QShWSzc94ws/",
+    "interviste-esclusive/AoPDjjoSWSzc94ws/"
   ]
 
   for (const category of categories) {
@@ -53,7 +53,7 @@ async function scrapeDirettaUrls(browser, dbIds, urls) {
       timeout: 60000
     })
 
-    const newUrls = await page.$$eval("a", (elements) =>
+    const allUrls = await page.$$eval(".fsNews a", (elements) =>
       elements
         .map((el) => el.href)
         .filter(
@@ -63,16 +63,21 @@ async function scrapeDirettaUrls(browser, dbIds, urls) {
         )
     )
 
-    for (const u of newUrls) {
-      if (!dbIds.has(u)) {
-        urls.push(u)
-      }
+    const allTitles = await page.$$eval(
+      ".wcl-news-heading-07_NwkAe",
+      (elements) => elements.map((el) => el.innerText)
+    )
+
+    const ids = allTitles.map((t) => rng(t)().toString())
+
+    for (let i = 0; i < ids.length; i++) {
+      if (!dbIds.has(ids[i])) urls.push(allUrls[i])
     }
 
     await page.close()
   }
 
-  console.log("✅ DIR")
+  console.log(`✅ DIR, queue:${urls.length}`)
 }
 
 async function scrapeCF(browser, dbIds, urls) {
@@ -104,7 +109,7 @@ async function scrapeCF(browser, dbIds, urls) {
   for (let i = 0; i < ids.length; i++) {
     if (!dbIds.has(ids[i])) urls.push(allUrls[i])
   }
-  console.log(`✅ CF & SF`)
+  console.log(`✅ CF & SF, queue:${urls.length}`)
 }
 
 async function scrapeRU(browser, dbIds, urls) {
@@ -140,7 +145,7 @@ async function scrapeRU(browser, dbIds, urls) {
       }
     }
   }
-  console.log(`✅ RU`)
+  console.log(`✅ RU, queue:${urls.length}`)
 }
 
 async function scrapeDS(browser, dbIds, urls) {
@@ -170,7 +175,7 @@ async function scrapeDS(browser, dbIds, urls) {
 
     await page.close()
   }
-  console.log(`✅ DS`)
+  console.log(`✅ DS, queue:${urls.length}`)
 }
 
 async function scrapeArticleCF(browser, url) {
@@ -345,16 +350,6 @@ async function scrapeDirettaArticle(browser, url) {
 
     const id = rng(title)().toString()
     const author = "Diretta"
-    console.log({
-      title,
-      excerpt,
-      body,
-      date,
-      url,
-      id,
-      author,
-      imgLink
-    })
     await firestore.collection("posts").doc(id).set(
       {
         title,
