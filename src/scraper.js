@@ -21,6 +21,60 @@ function createPromiseProducer(browser, urls, scrapeArticle) {
   }
 }
 
+async function scrapeDirettaUrls(browser, dbIds, urls) {
+  const categories = [
+    "calcio",
+    "serie-a",
+    "tennis",
+    "motori",
+    "basket",
+    "sport-invernali",
+    "rugby",
+    "ciclismo",
+    "sport-usa",
+    "boxe",
+    "atletica",
+    "nuoto",
+    "golf",
+    "pallavolo",
+    "padel",
+    "altri-sport",
+    "terzo-tempo",
+    "interviste-esclusive"
+  ]
+
+  for (const category of categories) {
+    const page = await browser.newPage()
+    await page.setUserAgent(userAgent)
+
+    const url = `https://www.diretta.it/news/${category}/page-10/`
+    await page.goto(url, {
+      waitUntil: "networkidle2",
+      timeout: 60000
+    })
+
+    const newUrls = await page.$$eval("a", (elements) =>
+      elements
+        .map((el) => el.href)
+        .filter(
+          (el) =>
+            el.includes("https://www.diretta.it/news/") &&
+            !el.includes("tracker")
+        )
+    )
+
+    for (const u of newUrls) {
+      if (!dbIds.has(u)) {
+        urls.push(u)
+      }
+    }
+
+    await page.close()
+  }
+
+  console.log("✅ DIR")
+}
+
 async function scrapeCF(browser, dbIds, urls) {
   const page = await browser.newPage()
   await page.setUserAgent(userAgent)
@@ -260,6 +314,69 @@ async function scrapeArticleDS(browser, url) {
   }
 }
 
+async function scrapeDirettaArticle(browser, url) {
+  const page = await browser.newPage()
+  await page.setUserAgent(userAgent)
+
+  try {
+    await page.goto(url, {
+      waitUntil: "networkidle2",
+      timeout: 60000
+    })
+
+    const title = await page.$eval("h1", (el) => el.innerText)
+    const fullDate = await page.$eval(
+      ".wcl-news-caption-01_gHM5e + meta",
+      (el) => el.content
+    )
+    const date = fullDate.split("T")[0] // Risultato: "2025-04-18"
+
+    const imgLink = await page
+      .$eval(".wcl-image_MVcAW", (el) => el.src)
+      .catch(() => null)
+
+    const excerpt = await page
+      .$eval("div.fsNewsArticle__perex", (el) => el.innerText)
+      .catch(() => "")
+
+    const body = await page.$$eval("div.fsNewsArticle__content p", (els) =>
+      els.map((el) => el.innerText).join("\n")
+    )
+
+    const id = rng(title)().toString()
+    const author = "Diretta"
+    console.log({
+      title,
+      excerpt,
+      body,
+      date,
+      url,
+      id,
+      author,
+      imgLink
+    })
+    await firestore.collection("posts").doc(id).set(
+      {
+        title,
+        excerpt,
+        body,
+        date,
+        url,
+        id,
+        author,
+        imgLink
+      },
+      { merge: true }
+    )
+
+    console.log(`✅ DIR: ${url}`)
+  } catch (e) {
+    console.error(`❌ DIR: ${url}`)
+  } finally {
+    await page.close()
+  }
+}
+
 async function runAllScrapers() {
   const browser = await puppeteer.launch({
     headless: true,
@@ -269,6 +386,7 @@ async function runAllScrapers() {
   const dbIds = await getExistingIds()
   const urls = []
 
+  await scrapeDirettaUrls(browser, dbIds, urls)
   await scrapeCF(browser, dbIds, urls)
   await scrapeRU(browser, dbIds, urls)
   await scrapeDS(browser, dbIds, urls)
@@ -277,6 +395,9 @@ async function runAllScrapers() {
 
   const pool = new Pool(
     createPromiseProducer(browser, urls, async (b, url) => {
+      if (url.includes("diretta.it")) {
+        return scrapeDirettaArticle(b, url)
+      }
       if (url.includes("calcioefinanza") || url.includes("sportefinanza")) {
         return scrapeArticleCF(b, url)
       } else if (url.includes("rivistaundici")) {
