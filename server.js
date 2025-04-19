@@ -82,9 +82,7 @@ app.post("/search", async (req, res) => {
 })
 
 app.get("/update", async (req, res) => {
-  const clientSecret = req.query.secret
-
-  if (clientSecret !== process.env.UPDATE_SECRET || !clientSecret) {
+  if (!process.env.UPDATE_SECRET) {
     return res.status(401).send("🔒 Unauthorized: Invalid secret.")
   }
 
