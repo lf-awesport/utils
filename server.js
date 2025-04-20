@@ -17,11 +17,21 @@ app.use(cors())
 app.use(express.json())
 
 app.post("/askAgent", async (req, res) => {
-  const question = req.body.q
-  if (!question)
-    return res.status(400).json({ error: "Missing query param `q`" })
+  const query = req.body.q
+
+  if (!query || typeof query !== "string") {
+    return res
+      .status(400)
+      .json({ error: "Missing or invalid 'query' in request body" })
+  }
+  // Check if query length exceeds 500 characters (adjustable limit)
+  if (query.length > 500) {
+    return res.status(400).json({
+      error: "Query is too long. Maximum allowed length is 500 characters."
+    })
+  }
   try {
-    const answer = await queryRAG(question)
+    const answer = await queryRAG(query)
     res.json(answer)
   } catch (error) {
     console.error("❌ Error in /askAgent:", error)
@@ -36,6 +46,13 @@ app.post("/search", async (req, res) => {
     return res
       .status(400)
       .json({ error: "Missing or invalid 'query' in request body" })
+  }
+
+  // Check if query length exceeds 500 characters (adjustable limit)
+  if (query.length > 500) {
+    return res.status(400).json({
+      error: "Query is too long. Maximum allowed length is 500 characters."
+    })
   }
 
   try {
