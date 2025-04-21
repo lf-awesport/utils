@@ -2,13 +2,9 @@ const express = require("express")
 const cors = require("cors")
 require("dotenv").config({ path: require("find-config")(".env") })
 
-const { processArticles } = require("./src/embeddings.js")
+const { processArticles } = require("./src/sentiment.js")
 
-const {
-  queryRAG,
-  searchSimilarDocuments,
-  generateQueryEmbedding
-} = require("./src/queryRAG.js")
+const { queryRAG, searchSimilarDocuments } = require("./src/queryRAG.js")
 
 const { runAllScrapers } = require("./src/scraper.js")
 
@@ -56,33 +52,30 @@ app.post("/search", async (req, res) => {
   }
 
   try {
-    // 1. Genera embedding della query
-    const embedding = await generateQueryEmbedding(query)
-
-    // 2. Valida ed elabora i filtri
-    const parsedFilters = Array.isArray(filters)
-      ? filters
-          .filter(
-            (f) =>
-              typeof f === "object" &&
-              typeof f.field === "string" &&
-              typeof f.op === "string" &&
-              f.value !== undefined
-          )
-          .map((f) => ({
-            field: f.field,
-            op: f.op,
-            value: f.value
-          }))
-      : []
+    // // 2. Valida ed elabora i filtri
+    // const parsedFilters = Array.isArray(filters)
+    //   ? filters
+    //       .filter(
+    //         (f) =>
+    //           typeof f === "object" &&
+    //           typeof f.field === "string" &&
+    //           typeof f.op === "string" &&
+    //           f.value !== undefined
+    //       )
+    //       .map((f) => ({
+    //         field: f.field,
+    //         op: f.op,
+    //         value: f.value
+    //       }))
+    //   : []
 
     // 3. Esegui ricerca semantica
     const results = await searchSimilarDocuments({
       collectionName: "sentiment",
-      queryVector: embedding,
+      query,
       distanceMeasure: "COSINE",
-      limit: 15,
-      filters: parsedFilters
+      limit: 15
+      // filters: parsedFilters
     })
 
     // 4. Rimuovi campo analysis

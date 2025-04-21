@@ -31,20 +31,23 @@ const maxTokens = 512
  */
 async function searchSimilarDocuments({
   collectionName,
-  queryVector,
+  query,
   vectorField = "embedding",
   distanceMeasure = "COSINE",
-  limit = 25,
+  limit = 10,
   distanceThreshold,
   filters = []
 }) {
   try {
     let coll = firestore.collection(collectionName)
 
-    // Applica eventuali filtri
-    for (const filter of filters) {
-      coll = coll.where(filter.field, filter.op, filter.value)
-    }
+    // // Applica eventuali filtri
+    // for (const filter of filters) {
+    //   coll = coll.where(filter.field, filter.op, filter.value)
+    // }
+
+    // 1. Embedding della domanda
+    const queryVector = await generateEmbedding(query)
 
     // Costruzione query vettoriale
     const vectorQuery = coll.findNearest({
@@ -68,12 +71,10 @@ async function searchSimilarDocuments({
   }
 }
 
-async function queryRAG(userQuestion) {
-  // 1. Embedding della domanda
-  const embedding = await generateEmbedding(userQuestion)
-
+async function queryRAG(query) {
   // 2. Vector search
   const results = await searchSimilarDocuments({
+    query,
     collectionName: "sentiment",
     queryVector: embedding,
     distanceMeasure: "COSINE",
