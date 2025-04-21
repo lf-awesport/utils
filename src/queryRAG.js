@@ -15,7 +15,7 @@ const schema = jsonSchema({
   required: ["answer"]
 })
 
-const maxTokens = 512
+const maxTokens = 8192
 
 /**
  * 🔍 Ricerca documenti simili in Firestore Vector Search (con tutti i campi)
@@ -77,7 +77,7 @@ async function queryRAG(query) {
     query,
     collectionName: "sentiment",
     distanceMeasure: "COSINE",
-    limit: 10
+    limit: 30
   })
 
   // 3. Costruzione contesto per Gemini
