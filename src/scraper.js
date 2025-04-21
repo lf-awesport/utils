@@ -6,14 +6,6 @@ const { firestore } = require("./firebase") // ⚠️ Usa Firestore SDK Cloud
 const userAgent =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
 
-async function getExistingIds() {
-  const snapshot = await firestore.collection("posts").get()
-  const ids = new Set()
-  snapshot.forEach((doc) => ids.add(doc.id))
-  console.log(`🔍 Found ${ids.size} articles in db`)
-  return ids
-}
-
 function createPromiseProducer(browser, urls, scrapeArticle) {
   return () => {
     const url = urls.pop()
@@ -21,7 +13,7 @@ function createPromiseProducer(browser, urls, scrapeArticle) {
   }
 }
 
-async function scrapeDirettaUrls(browser, dbIds, urls) {
+async function scrapeDI(browser, urls) {
   const categories = [
     "calcio",
     "serie-a/COuk57CiCdnS0XT8/",
@@ -68,19 +60,22 @@ async function scrapeDirettaUrls(browser, dbIds, urls) {
       (elements) => elements.map((el) => el.innerText)
     )
 
-    const ids = allTitles.map((t) => rng(t)().toString())
+    for (let i = 0; i < allTitles.length; i++) {
+      const id = rng(allTitles[i])().toString()
+      const postRef = firestore.collection("posts").doc(id)
+      const postSnap = await postRef.get()
 
-    for (let i = 0; i < ids.length; i++) {
-      if (!dbIds.has(ids[i])) urls.push(allUrls[i])
+      if (!postSnap.exists) {
+        urls.push(allUrls[i])
+      }
     }
-
     await page.close()
   }
 
   console.log(`✅ DIR, queue:${urls.length}`)
 }
 
-async function scrapeCF(browser, dbIds, urls) {
+async function scrapeCF(browser, urls) {
   const page = await browser.newPage()
   await page.setUserAgent(userAgent)
   await page.goto("https://www.calcioefinanza.it/", {
@@ -100,19 +95,24 @@ async function scrapeCF(browser, dbIds, urls) {
   const titlesSF = await page.$$eval(".post-title", (els) =>
     els.map((e) => e.innerText)
   )
-  await page.close()
 
   const allUrls = urlsCF.concat(urlsSF)
   const allTitles = titlesCF.concat(titlesSF)
-  const ids = allTitles.map((t) => rng(t)().toString())
 
-  for (let i = 0; i < ids.length; i++) {
-    if (!dbIds.has(ids[i])) urls.push(allUrls[i])
+  for (let i = 0; i < allTitles.length; i++) {
+    const id = rng(allTitles[i])().toString()
+    const postRef = firestore.collection("posts").doc(id)
+    const postSnap = await postRef.get()
+
+    if (!postSnap.exists) {
+      urls.push(allUrls[i])
+    }
   }
+  await page.close()
   console.log(`✅ CF & SF, queue:${urls.length}`)
 }
 
-async function scrapeRU(browser, dbIds, urls) {
+async function scrapeRU(browser, urls) {
   const categories = [
     "media",
     "lifestyle",
@@ -131,24 +131,29 @@ async function scrapeRU(browser, dbIds, urls) {
           timeout: 60000
         }
       )
-      const currentUrls = await page.$$eval(".article-title", (els) =>
+      const allUrls = await page.$$eval(".article-title", (els) =>
         els.map((el) => el.href)
       )
-      const currentTitles = await page.$$eval(".article-title > span", (els) =>
+      const allTitles = await page.$$eval(".article-title > span", (els) =>
         els.map((el) => el.innerText)
       )
-      await page.close()
 
-      const ids = currentTitles.map((t) => rng(t)().toString())
-      for (let i = 0; i < ids.length; i++) {
-        if (!dbIds.has(ids[i])) urls.push(currentUrls[i])
+      for (let i = 0; i < allTitles.length; i++) {
+        const id = rng(allTitles[i])().toString()
+        const postRef = firestore.collection("posts").doc(id)
+        const postSnap = await postRef.get()
+
+        if (!postSnap.exists) {
+          urls.push(allUrls[i])
+        }
       }
+      await page.close()
     }
   }
   console.log(`✅ RU, queue:${urls.length}`)
 }
 
-async function scrapeDS(browser, dbIds, urls) {
+async function scrapeDS(browser, urls) {
   for (let currentPage = 1; currentPage <= 6; currentPage++) {
     const page = await browser.newPage()
     await page.setUserAgent(userAgent)
@@ -160,19 +165,22 @@ async function scrapeDS(browser, dbIds, urls) {
       }
     )
 
-    const currentUrls = await page.$$eval("h5>a", (elements) =>
+    const allUrls = await page.$$eval("h5>a", (elements) =>
       elements.map((element) => element.href)
     )
-    const currentTitles = await page.$$eval("h5>a", (elements) =>
+    const allTitles = await page.$$eval("h5>a", (elements) =>
       elements.map((element) => element.innerText)
     )
 
-    const currentIds = currentTitles.map((e) => rng(e)().toString())
+    for (let i = 0; i < allTitles.length; i++) {
+      const id = rng(allTitles[i])().toString()
+      const postRef = firestore.collection("posts").doc(id)
+      const postSnap = await postRef.get()
 
-    for (let i = 0; i < currentIds.length; i++) {
-      if (!dbIds.has(currentIds[i])) urls.push(currentUrls[i])
+      if (!postSnap.exists) {
+        urls.push(allUrls[i])
+      }
     }
-
     await page.close()
   }
   console.log(`✅ DS, queue:${urls.length}`)
@@ -210,7 +218,8 @@ async function scrapeArticleCF(browser, url) {
           url,
           id,
           author,
-          imgLink
+          imgLink,
+          processed: false
         },
         { merge: true }
       )
@@ -252,7 +261,8 @@ async function scrapeArticleRU(browser, url) {
         url,
         id,
         author,
-        imgLink
+        imgLink,
+        processed: false
       },
       { merge: true }
     )
@@ -306,7 +316,8 @@ async function scrapeArticleDS(browser, url) {
           url,
           id,
           author: "Diritto & Sport",
-          imgLink
+          imgLink,
+          processed: false
         },
         { merge: true }
       )
@@ -359,7 +370,8 @@ async function scrapeDirettaArticle(browser, url) {
         url,
         id,
         author,
-        imgLink
+        imgLink,
+        processed: false
       },
       { merge: true }
     )
@@ -378,13 +390,12 @@ async function runAllScrapers() {
     args: ["--no-sandbox", "--disable-setuid-sandbox"]
   })
 
-  const dbIds = await getExistingIds()
   const urls = []
 
-  await scrapeDirettaUrls(browser, dbIds, urls)
-  await scrapeCF(browser, dbIds, urls)
-  await scrapeRU(browser, dbIds, urls)
-  await scrapeDS(browser, dbIds, urls)
+  await scrapeDI(browser, urls)
+  await scrapeCF(browser, urls)
+  await scrapeRU(browser, urls)
+  await scrapeDS(browser, urls)
 
   console.log(`🔍 Found ${urls.length} new articles to scrape`)
 

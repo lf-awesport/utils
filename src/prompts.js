@@ -84,7 +84,7 @@ _Output atteso_: “Accordi di sponsorship sopra quota 60 M€/anno (es. Real 
 **Istruzioni**
 1. Estrai le entità più rilevanti dagli articoli selezionati e usale per dare contesto.  
 2. Argomenta con dati (cifre, date) ma NON citare il nome degli articoli.  
-3. Mantieni tono formale, frasi < 22 parole.  
+3. Mantieni tono formale, frasi < 22 parole.
 5. Sintetizza in massimo 2 paragrafi + 3 bullet “In breve”.
 
 ---

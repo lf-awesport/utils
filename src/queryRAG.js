@@ -76,7 +76,6 @@ async function queryRAG(query) {
   const results = await searchSimilarDocuments({
     query,
     collectionName: "sentiment",
-    queryVector: embedding,
     distanceMeasure: "COSINE",
     limit: 10
   })
@@ -97,12 +96,7 @@ SCORE: ${(data.vector_distance || 0).toFixed(4)}
     .join("\n-----------------------------\n")
 
   // 4. Chiamata a Gemini
-  const text = await gemini(
-    context,
-    askAgentPrompt(userQuestion),
-    maxTokens,
-    schema
-  )
+  const text = await gemini(context, askAgentPrompt(query), maxTokens, schema)
 
   // 5. Costruzione array di sources senza il campo BODY
   const sources = results.map(({ id, data }) => {
