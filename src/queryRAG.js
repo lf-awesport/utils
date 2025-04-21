@@ -1,32 +1,21 @@
 const { firestore } = require("./firebase") // usa il client @google-cloud/firestore
-const { embed } = require("ai")
-const { createVertex } = require("@ai-sdk/google-vertex")
-const { summarizeContent } = require("./summarize")
+const { jsonSchema } = require("ai")
+const { gemini } = require("./gemini")
 const { askAgentPrompt } = require("./prompts")
+const { generateEmbedding } = require("./embeddings")
 
-const vertex_ai = createVertex({
-  project: process.env.PROJECT_ID,
-  location: process.env.LOCATION,
-  googleAuthOptions: {
-    credentials: {
-      client_email: process.env.CLIENT_EMAIL,
-      private_key: process.env.PRIVATE_KEY
+const schema = jsonSchema({
+  $schema: "http://json-schema.org/draft-04/schema#",
+  type: "object",
+  properties: {
+    answer: {
+      type: "string"
     }
-  }
+  },
+  required: ["answer"]
 })
 
-/**
- * 🔠 Genera l'embedding di una query testuale con Vertex AI
- * @param {string} text - Testo della query da trasformare in embedding
- * @returns {Promise<number[]>} - Vettore embedding
- */
-async function generateQueryEmbedding(text) {
-  const { embedding } = await embed({
-    model: vertex_ai.textEmbeddingModel(process.env.EMBEDDING_MODEL),
-    value: text
-  })
-  return embedding
-}
+const maxTokens = 512
 
 /**
  * 🔍 Ricerca documenti simili in Firestore Vector Search (con tutti i campi)
@@ -81,14 +70,14 @@ async function searchSimilarDocuments({
 
 async function queryRAG(userQuestion) {
   // 1. Embedding della domanda
-  const embedding = await generateQueryEmbedding(userQuestion)
+  const embedding = await generateEmbedding(userQuestion)
 
   // 2. Vector search
   const results = await searchSimilarDocuments({
     collectionName: "sentiment",
     queryVector: embedding,
     distanceMeasure: "COSINE",
-    limit: 25
+    limit: 10
   })
 
   // 3. Costruzione contesto per Gemini
@@ -107,7 +96,12 @@ SCORE: ${(data.vector_distance || 0).toFixed(4)}
     .join("\n-----------------------------\n")
 
   // 4. Chiamata a Gemini
-  const text = await summarizeContent(context, askAgentPrompt(userQuestion))
+  const text = await gemini(
+    context,
+    askAgentPrompt(userQuestion),
+    maxTokens,
+    schema
+  )
 
   // 5. Costruzione array di sources senza il campo BODY
   const sources = results.map(({ id, data }) => {
@@ -125,6 +119,5 @@ SCORE: ${(data.vector_distance || 0).toFixed(4)}
 
 module.exports = {
   queryRAG,
-  searchSimilarDocuments,
-  generateQueryEmbedding
+  searchSimilarDocuments
 }
