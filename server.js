@@ -74,7 +74,7 @@ app.post("/search", async (req, res) => {
       collectionName: "sentiment",
       query,
       distanceMeasure: "COSINE",
-      limit: 15
+      limit: 5
       // filters: parsedFilters
     })
 
