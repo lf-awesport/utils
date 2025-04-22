@@ -180,7 +180,7 @@ const processArticles = async () => {
         count++
 
         // 6. Commit ogni 500 documenti
-        if (count % 500 === 0) {
+        if (count % 50 === 0) {
           await batch.commit()
           console.log(`✅ Committed batch of 500 documents`)
           batch = firestore.batch()

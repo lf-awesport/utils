@@ -109,7 +109,7 @@ SCORE: ${(data.vector_distance || 0).toFixed(4)}
     }
   })
 
-  return { text, sources }
+  return { text, sources, query }
 }
 
 module.exports = {
