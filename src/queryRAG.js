@@ -77,7 +77,7 @@ async function queryRAG(query) {
     query,
     collectionName: "sentiment",
     distanceMeasure: "COSINE",
-    limit: 5
+    limit: 25
   })
 
   // 3. Costruzione contesto per Gemini

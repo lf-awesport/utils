@@ -5,6 +5,7 @@ require("dotenv").config({ path: require("find-config")(".env") })
 const { processArticles } = require("./src/sentiment.js")
 
 const { queryRAG, searchSimilarDocuments } = require("./src/queryRAG.js")
+const { generateLearningModule } = require("./src/lesson.js")
 
 const { runAllScrapers } = require("./src/scraper.js")
 
@@ -74,7 +75,7 @@ app.post("/search", async (req, res) => {
       collectionName: "sentiment",
       query,
       distanceMeasure: "COSINE",
-      limit: 5
+      limit: 10
       // filters: parsedFilters
     })
 
@@ -87,6 +88,32 @@ app.post("/search", async (req, res) => {
     res.json({ sources })
   } catch (error) {
     console.error("❌ Error in /search:", error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+app.post("/generateModule", async (req, res) => {
+  const { topic, materia, lessonId } = req.body
+
+  if (!topic || !materia || !lessonId) {
+    return res.status(400).json({
+      error: "Missing required fields: 'topic', 'materia', 'lessonId'"
+    })
+  }
+
+  try {
+    const result = await generateLearningModule({ topic, materia, lessonId })
+
+    if (!result) {
+      return res.status(500).json({ error: "Failed to generate module" })
+    }
+
+    res.status(200).json({
+      message: `✅ Module '${lessonId}' created under '${materia}'`,
+      cards: result
+    })
+  } catch (error) {
+    console.error("❌ Error in /generateModule:", error)
     res.status(500).json({ error: error.message })
   }
 })
