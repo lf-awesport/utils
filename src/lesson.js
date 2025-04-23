@@ -33,9 +33,9 @@ const essayZod = z.object({
 })
 
 const levelInstructions = {
-  easy: `\n🔰 EASY – Introduzione ai concetti base del diritto sportivo.\n- Definisci termini fondamentali (es. ordinamento sportivo, CONI, giurisdizione sportiva).\n- Spiega in modo semplice, con esempi concreti ma basilari.\n- NON introdurre norme specifiche o casi complessi.`,
-  medium: `\n⚖️ MEDIUM – Applicazioni pratiche e riferimenti normativi.\n- Focalizzati su regolamenti (es. WADA, Codice di Giustizia Sportiva), ruoli di organi e sanzioni.\n- Fai riferimento a casi reali, ma spiegandoli in modo chiaro.\n- NON ripetere concetti introdotti nell’EASY.`,
-  hard: `\n🧠 HARD – Approccio critico e avanzato.\n- Analizza dilemmi interpretativi, contraddizioni normative, giurisprudenza e principi UE.\n- Stimola la riflessione giuridica con domande aperte.\n- NON ripetere quanto già spiegato nei livelli precedenti.`
+  easy: `\nIntroduzione ai concetti base del diritto sportivo.\n- Definisci termini fondamentali (es. ordinamento sportivo, CONI, giurisdizione sportiva).\n- Spiega in modo semplice, con esempi concreti ma basilari.\n- NON introdurre norme specifiche o casi complessi.`,
+  medium: `\nApplicazioni pratiche e riferimenti normativi.\n- Focalizzati su regolamenti (es. WADA, Codice di Giustizia Sportiva), ruoli di organi e sanzioni.\n- Fai riferimento a casi reali, ma spiegandoli in modo chiaro.\n- NON ripetere concetti introdotti nell’EASY.`,
+  hard: `\n🧠Approccio critico e avanzato.\n- Analizza dilemmi interpretativi, contraddizioni normative, giurisprudenza e principi UE.\n- Stimola la riflessione giuridica con domande aperte.\n- NON ripetere quanto già spiegato nei livelli precedenti.`
 }
 
 const essayPrompt = ({ topic, materia, contextString }) => `
@@ -45,6 +45,8 @@ Utilizza un linguaggio accessibile, ma rigoroso e ben strutturato. Lo scopo è p
 
 ### Contesto disponibile:
 ${contextString}...
+
+FORMATTA TUTTO IN MARKDOWN SEMANTICO EVIDENZIANDO IN GRASSETTO o IN CORSIVO LE PAROLE CHIAVE.
 
 ❗ Rispondi con un oggetto JSON:
 {
@@ -120,7 +122,7 @@ Hai ricevuto una bozza completa di un modulo didattico sul tema: **\"${topic}\"*
 - Per ogni livello:
   - Riformula il **levelTitle** per renderlo più **specifico e coerente** con i contenuti delle carte.
   - Mescola **l’ordine delle opzioni del quiz**, mantenendo invariata la risposta corretta.
-  - Mantieni 5 cards per livello.
+  - Mantieni solo 3 cards per livello, evitando ripetizioni di contenuti.
   - Migliora lo stile e la chiarezza se necessario.
 - Rivedi anche il **saggio introduttivo**, assicurandoti che sia coerente, ben scritto e utile a comprendere il tema.
 - NON aggiungere nuovi contenuti, ma migliora la coerenza e varietà.
@@ -157,7 +159,7 @@ async function generateLearningModule({ topic, materia, lessonId }) {
     const essay = await gemini(
       contextString,
       essayPrompt({ topic, materia, contextString }),
-      2048,
+      4096,
       essayZod
     )
 
@@ -238,20 +240,50 @@ async function createDefaultModules() {
     {
       topic:
         "Il caso Sinner e il controllo antidoping: ruolo e limiti del sistema WADA",
-      materia: "Sports Law",
+      materia: "Sport Law",
       lessonId: "sinner-wada-quiz-module"
     },
     {
       topic:
         "Nicolò Fagioli e le scommesse sportive: disciplina, sanzioni e giurisdizione",
-      materia: "Sports Law",
+      materia: "Sport Law",
       lessonId: "fagioli-scommesse-quiz-module"
     },
     {
       topic:
         "Ultras, mafia e responsabilità nel calcio italiano: tra ordine pubblico e autonomia sportiva",
-      materia: "Sports Law",
+      materia: "Sport Law",
       lessonId: "ultras-mafia-quiz-module"
+    },
+    {
+      topic:
+        "La Superlega e il Monopolio Federale: concorrenza tra circuiti e sentenza UE",
+      materia: "Sport Law",
+      lessonId: "superlega-monopolio-ue"
+    },
+    {
+      topic:
+        "Il lavoro sportivo dilettantistico: riforma normativa, sentenze e impatto sulle ASD",
+      materia: "Sport Law",
+      lessonId: "lavoro-sportivo-dilettanti"
+    },
+    {
+      topic:
+        "Tutela dei minori nello sport: safeguarding, procedimenti speciali e confronto con l’ordinamento penale",
+      materia: "Sport Law",
+      lessonId: "tutela-minori-sport"
+    },
+    {
+      topic:
+        "Illecito sportivo vs. civile: analisi giurisprudenziale e criteri distintivi",
+      materia: "Sport Law",
+      lessonId: "illecito-sportivo-civile"
+    },
+    {
+      topic:
+        "Spionaggio sportivo e fair play: droni, etica e sanzioni nelle competizioni internazionali",
+      materia: "Sport Law",
+      lessonId: "spionaggio-fairplay-sportivo"
     }
   ]
 
@@ -274,4 +306,4 @@ async function createDefaultModules() {
 
 module.exports = { generateLearningModule, createDefaultModules }
 
-createDefaultModules()
+// createDefaultModules()
