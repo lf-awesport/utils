@@ -1,90 +1,110 @@
 const { firestore } = require("./firebase")
-const { jsonSchema } = require("ai")
+const { z } = require("zod")
 const { gemini } = require("./gemini")
 const { searchSimilarDocuments } = require("./queryRAG")
 
-const levelSchema = jsonSchema({
-  type: "object",
-  required: ["levelTitle", "cards"],
-  properties: {
-    levelTitle: { type: "string" },
-    cards: {
-      type: "array",
-      items: {
-        type: "object",
-        required: ["title", "content", "quiz"],
-        properties: {
-          title: { type: "string" },
-          content: { type: "string" },
-          quiz: {
-            type: "object",
-            required: ["question", "options", "correctAnswer"],
-            properties: {
-              question: { type: "string" },
-              options: {
-                type: "array",
-                minItems: 3,
-                maxItems: 3,
-                items: { type: "string" }
-              },
-              correctAnswer: { type: "string" }
-            }
-          }
-        }
-      }
-    }
-  }
+const levelSchema = z.object({
+  levelTitle: z.string(),
+  cards: z.array(
+    z.object({
+      title: z.string(),
+      content: z.string(),
+      quiz: z.object({
+        question: z.string(),
+        options: z.array(z.string()).min(3).max(3),
+        correctAnswer: z.string()
+      })
+    })
+  )
 })
 
-const promptTemplate = (level, topic, materia) => {
-  const levelInstructions = {
-    easy: `
-🔰 Questo è un livello EASY. Il contenuto deve essere introduttivo, pensato per chi si avvicina per la prima volta al diritto sportivo.
-- Spiega concetti base in modo semplice: cos'è l'ordinamento sportivo, cosa fa il CONI, cosa significa "giurisdizione sportiva", ecc.
-- Evita dettagli normativi o giurisprudenziali complessi.
-`,
-    medium: `
-⚖️ Questo è un livello MEDIUM. Il contenuto deve essere applicato e concreto, rivolto a studenti con una base giuridica.
-- Introduci norme specifiche, esempi reali, regolamenti (es. WADA, Codice Giustizia Sportiva), ricorsi, sanzioni, ruolo degli organi (es. CAS).
-- Usa casi reali per spiegare i concetti, ma con chiarezza didattica.
-`,
-    hard: `
-🧠 Questo è un livello HARD. Il contenuto deve essere critico e avanzato, pensato per studenti in grado di analizzare giuridicamente.
-- Affronta dilemmi interpretativi, analizza sentenze, falle normative, autonomie in conflitto, principi UE vs norme sportive.
-- Stimola riflessione: cosa dice la giurisprudenza? Ci sono contraddizioni? Quali sono le implicazioni?
-`
-  }
+const reviewSchema = z.object({
+  easy: levelSchema,
+  medium: levelSchema,
+  hard: levelSchema
+})
+
+const levelInstructions = {
+  easy: `\n🔰 EASY – Introduzione ai concetti base del diritto sportivo.\n- Definisci termini fondamentali (es. ordinamento sportivo, CONI, giurisdizione sportiva).\n- Spiega in modo semplice, con esempi concreti ma basilari.\n- NON introdurre norme specifiche o casi complessi.`,
+  medium: `\n⚖️ MEDIUM – Applicazioni pratiche e riferimenti normativi.\n- Focalizzati su regolamenti (es. WADA, Codice di Giustizia Sportiva), ruoli di organi e sanzioni.\n- Fai riferimento a casi reali, ma spiegandoli in modo chiaro.\n- NON ripetere concetti introdotti nell’EASY.`,
+  hard: `\n🧠 HARD – Approccio critico e avanzato.\n- Analizza dilemmi interpretativi, contraddizioni normative, giurisprudenza e principi UE.\n- Stimola la riflessione giuridica con domande aperte.\n- NON ripetere quanto già spiegato nei livelli precedenti.`
+}
+
+const promptTemplate = ({
+  level,
+  topic,
+  materia,
+  contextString,
+  previousOutput = null
+}) => {
+  const additionalContext = previousOutput
+    ? `\n### Output del livello precedente:\n${JSON.stringify(previousOutput)}\n\n❗ Evita ripetizioni. Approfondisci nuovi aspetti coerenti con il livello attuale.\n`
+    : ""
 
   return `
-Sei un esperto di **Diritto Sportivo** (Sports Law) e docente universitario. Devi progettare un modulo didattico per studenti universitari sul tema: **"${topic}"**, all'interno del corso di "${materia}".
+Sei un esperto di Diritto Sportivo e docente universitario. Devi progettare un modulo didattico sul tema **\"${topic}\"**, per il corso di \"${materia}\".
 
 ### Livello: ${level.toUpperCase()}
 ${levelInstructions[level]}
 
-### Contesto:
-Hai a disposizione una raccolta di fonti, articoli e casi reali tratti dal mondo dello sport e della giustizia sportiva:
+${additionalContext}
+
+### Contesto (articoli e fonti reali):
+${contextString.slice(0, 4000)}...
 
 ### Obiettivo:
-Aiuta gli studenti a comprendere concetti giuridici chiave legati al diritto sportivo. Crea contenuti originali e coerenti con il livello indicato, utilizzando riferimenti concreti al mondo dello sport, alla normativa vigente e agli organismi di controllo (es. WADA, CAS, FIFA, CONI, FIGC, IOC).
+Aiuta gli studenti a comprendere concetti chiave del diritto sportivo, in modo coerente con il livello di difficoltà.
 
-### Requisiti dell'output:
-Restituisci un **oggetto JSON** con questa struttura:
-- levelTitle: titolo coerente con il livello e il focus giuridico
-- cards: 5 schede, ciascuna con:
+### Requisiti output:
+Restituisci un **oggetto JSON**:
+- levelTitle: titolo del livello
+- cards: 3 schede, ognuna con:
   - title
   - content (max 100 parole)
-  - quiz (con 3 opzioni, 1 corretta)
+  - quiz: 3 opzioni, 1 corretta
 
 ### Stile:
-Professionale e accessibile. Coinvolgi studenti di giurisprudenza o management sportivo. Usa un linguaggio chiaro ma rigoroso.
+Professionale e accessibile. Linguaggio chiaro, rigoroso, adatto a studenti universitari.
 
-❗ Restituisci solo l'oggetto JSON. Nessun testo aggiuntivo.
+✅ Checklist prima di rispondere:
+- Ogni livello deve approfondire aspetti differenti.
+- Le card devono trattare temi complementari e non ridondanti.
+- Il livello HARD può criticare o problematizzare i contenuti dei precedenti.
+
+❗ Rispondi solo con l’oggetto JSON.
 `
 }
 
+const reviewPrompt = ({ topic, materia, fullDraft }) => `
+Sei un esperto di Diritto Sportivo e instructional designer per moduli educativi.
+
+Hai ricevuto una bozza completa di un modulo didattico sul tema: **\"${topic}\"**, per il corso di \"${materia}\". La bozza è divisa in 3 livelli: EASY, MEDIUM, HARD.
+
+### Il tuo compito:
+- Rivedi **interamente** il modulo.
+- Per ogni livello:
+  - Riformula il **levelTitle** per renderlo più breve e **specifico e coerente** con i contenuti delle carte.
+  - Mescola bene **l’ordine delle opzioni del quiz**, mantenendo invariata la risposta corretta.
+  - Mantieni solo 3 cards per livello per evitare ripetizioni tra livelli e ridondanze e ripetizioni
+  - Migliora lo stile e la chiarezza se necessario.
+- NON aggiungere nuovi contenuti, ma migliora la coerenza e varietà.
+- NON ripetere concetti già trattati in altri livelli.
+
+❗ Restituisci un oggetto JSON con:
+- easy
+- medium
+- hard
+
+❗ Ogni oggetto deve avere la stessa struttura (levelTitle, cards, ecc.)
+
+### Bozza iniziale del modulo:
+${JSON.stringify(fullDraft)}
+
+❗ Rispondi SOLO con il JSON finale.
+`
+
 async function generateLearningModule({ topic, materia, lessonId }) {
   try {
-    // 1. Cerca articoli rilevanti
     const context = await searchSimilarDocuments({
       query: topic,
       collectionName: "sentiment",
@@ -95,40 +115,61 @@ async function generateLearningModule({ topic, materia, lessonId }) {
     const contextString = context
       .map(({ data }) => data.analysis?.cleanText || "")
       .join("\n---\n")
-
     const imgLink = context.find((r) => r.data.imgLink)?.data?.imgLink || null
 
     const easy = await gemini(
       contextString,
-      promptTemplate("easy", topic, materia),
-      8192,
-      levelSchema
-    )
-    const medium = await gemini(
-      contextString,
-      promptTemplate("medium", topic, materia),
-      8192,
-      levelSchema
-    )
-    const hard = await gemini(
-      contextString,
-      promptTemplate("hard", topic, materia),
+      promptTemplate({ level: "easy", topic, materia, contextString }),
       8192,
       levelSchema
     )
 
-    //new call to fix everything?
+    const medium = await gemini(
+      contextString,
+      promptTemplate({
+        level: "medium",
+        topic,
+        materia,
+        contextString,
+        previousOutput: easy
+      }),
+      8192,
+      levelSchema
+    )
+
+    const hard = await gemini(
+      contextString,
+      promptTemplate({
+        level: "hard",
+        topic,
+        materia,
+        contextString,
+        previousOutput: medium
+      }),
+      8192,
+      levelSchema
+    )
+
+    const fullDraft = { easy, medium, hard }
+
+    const reviewed = await gemini(
+      contextString,
+      reviewPrompt({ topic, materia, fullDraft }),
+      8192,
+      reviewSchema
+    )
+
+    if (!reviewed) {
+      console.error("❌ La revisione non ha restituito dati validi.")
+      return null
+    }
 
     const moduleDoc = {
       topic,
       materia,
       createdAt: new Date(),
       cover: imgLink,
-      levels: {
-        easy,
-        medium,
-        hard
-      }
+      levels: reviewed
     }
 
     await firestore
@@ -144,8 +185,6 @@ async function generateLearningModule({ topic, materia, lessonId }) {
     return null
   }
 }
-
-module.exports = { generateLearningModule }
 
 async function createDefaultModules() {
   const modules = [
@@ -170,19 +209,22 @@ async function createDefaultModules() {
   ]
 
   for (const module of modules) {
-    console.log(`\u{1F4DA} Generando modulo: ${module.lessonId}`)
+    console.log(`\n📘 Generando modulo: ${module.lessonId}`)
     const result = await generateLearningModule(module)
     if (result) {
-      console.log(`\u{2705} Modulo ${module.lessonId} generato con successo!`)
+      console.log(`✅ Modulo "${module.lessonId}" generato con successo!\n`)
+      console.log("Titoli dei livelli:")
+      console.log("- EASY:", result.easy.levelTitle)
+      console.log("- MEDIUM:", result.medium.levelTitle)
+      console.log("- HARD:", result.hard.levelTitle)
     } else {
       console.warn(
-        `\u{26A0}\u{FE0F} Errore nella generazione di ${module.lessonId}`
+        `⚠️ Errore nella generazione del modulo \"${module.lessonId}\"`
       )
     }
   }
 }
 
-module.exports = { createDefaultModules }
+module.exports = { generateLearningModule, createDefaultModules }
 
-// Esecuzione immediata (facoltativa)
 // createDefaultModules()
