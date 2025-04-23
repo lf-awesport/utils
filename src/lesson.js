@@ -3,7 +3,7 @@ const { z } = require("zod")
 const { gemini } = require("./gemini")
 const { searchSimilarDocuments } = require("./queryRAG")
 
-const levelSchema = z.object({
+const levelZod = z.object({
   levelTitle: z.string(),
   cards: z.array(
     z.object({
@@ -19,9 +19,17 @@ const levelSchema = z.object({
 })
 
 const reviewSchema = z.object({
-  easy: levelSchema,
-  medium: levelSchema,
-  hard: levelSchema
+  essay: z.object({
+    title: z.string(),
+    essay: z.string()
+  }),
+  easy: levelZod,
+  medium: levelZod,
+  hard: levelZod
+})
+const essayZod = z.object({
+  title: z.string(),
+  essay: z.string()
 })
 
 const levelInstructions = {
@@ -30,15 +38,42 @@ const levelInstructions = {
   hard: `\n🧠 HARD – Approccio critico e avanzato.\n- Analizza dilemmi interpretativi, contraddizioni normative, giurisprudenza e principi UE.\n- Stimola la riflessione giuridica con domande aperte.\n- NON ripetere quanto già spiegato nei livelli precedenti.`
 }
 
+const essayPrompt = ({ topic, materia, contextString }) => `
+Sei un esperto di diritto sportivo. Scrivi un breve saggio (max 400 parole) per aiutare uno studente universitario a comprendere il tema: **\"${topic}\"**, all'interno del corso di \"${materia}\".
+
+Utilizza un linguaggio accessibile, ma rigoroso e ben strutturato. Lo scopo è preparare lo studente ad affrontare il modulo didattico. Fai riferimento a fatti reali, norme o principi fondamentali rilevanti, ma senza andare troppo nel dettaglio normativo.
+
+### Contesto disponibile:
+${contextString}...
+
+❗ Rispondi con un oggetto JSON:
+{
+  "title": "Titolo del saggio",
+  "essay": "Testo del saggio"
+}
+`
+
 const promptTemplate = ({
   level,
   topic,
   materia,
   contextString,
+  essay,
   previousOutput = null
 }) => {
   const additionalContext = previousOutput
-    ? `\n### Output del livello precedente:\n${JSON.stringify(previousOutput)}\n\n❗ Evita ripetizioni. Approfondisci nuovi aspetti coerenti con il livello attuale.\n`
+    ? `
+### Output del livello precedente:
+${JSON.stringify(previousOutput)}
+`
+    : ""
+
+  const introEssay = essay
+    ? `
+### Saggio introduttivo:
+Titolo: ${essay.title}
+${essay.essay}
+`
     : ""
 
   return `
@@ -50,7 +85,7 @@ ${levelInstructions[level]}
 ${additionalContext}
 
 ### Contesto (articoli e fonti reali):
-${contextString.slice(0, 4000)}...
+${contextString}...
 
 ### Obiettivo:
 Aiuta gli studenti a comprendere concetti chiave del diritto sportivo, in modo coerente con il livello di difficoltà.
@@ -58,7 +93,7 @@ Aiuta gli studenti a comprendere concetti chiave del diritto sportivo, in modo c
 ### Requisiti output:
 Restituisci un **oggetto JSON**:
 - levelTitle: titolo del livello
-- cards: 3 schede, ognuna con:
+- cards: 5 schede, ognuna con:
   - title
   - content (max 100 parole)
   - quiz: 3 opzioni, 1 corretta
@@ -78,24 +113,26 @@ Professionale e accessibile. Linguaggio chiaro, rigoroso, adatto a studenti univ
 const reviewPrompt = ({ topic, materia, fullDraft }) => `
 Sei un esperto di Diritto Sportivo e instructional designer per moduli educativi.
 
-Hai ricevuto una bozza completa di un modulo didattico sul tema: **\"${topic}\"**, per il corso di \"${materia}\". La bozza è divisa in 3 livelli: EASY, MEDIUM, HARD.
+Hai ricevuto una bozza completa di un modulo didattico sul tema: **\"${topic}\"**, per il corso di \"${materia}\". La bozza è divisa in 3 livelli: EASY, MEDIUM, HARD e contiene un saggio introduttivo.
 
 ### Il tuo compito:
 - Rivedi **interamente** il modulo.
 - Per ogni livello:
-  - Riformula il **levelTitle** per renderlo più breve e **specifico e coerente** con i contenuti delle carte.
-  - Mescola bene **l’ordine delle opzioni del quiz**, mantenendo invariata la risposta corretta.
-  - Mantieni solo 3 cards per livello per evitare ripetizioni tra livelli e ridondanze e ripetizioni
+  - Riformula il **levelTitle** per renderlo più **specifico e coerente** con i contenuti delle carte.
+  - Mescola **l’ordine delle opzioni del quiz**, mantenendo invariata la risposta corretta.
+  - Mantieni 5 cards per livello.
   - Migliora lo stile e la chiarezza se necessario.
+- Rivedi anche il **saggio introduttivo**, assicurandoti che sia coerente, ben scritto e utile a comprendere il tema.
 - NON aggiungere nuovi contenuti, ma migliora la coerenza e varietà.
 - NON ripetere concetti già trattati in altri livelli.
 
 ❗ Restituisci un oggetto JSON con:
+- essay
 - easy
 - medium
 - hard
 
-❗ Ogni oggetto deve avere la stessa struttura (levelTitle, cards, ecc.)
+❗ Ogni oggetto deve avere la struttura prevista.
 
 ### Bozza iniziale del modulo:
 ${JSON.stringify(fullDraft)}
@@ -117,11 +154,18 @@ async function generateLearningModule({ topic, materia, lessonId }) {
       .join("\n---\n")
     const imgLink = context.find((r) => r.data.imgLink)?.data?.imgLink || null
 
+    const essay = await gemini(
+      contextString,
+      essayPrompt({ topic, materia, contextString }),
+      2048,
+      essayZod
+    )
+
     const easy = await gemini(
       contextString,
-      promptTemplate({ level: "easy", topic, materia, contextString }),
+      promptTemplate({ level: "easy", topic, materia, contextString, essay }),
       8192,
-      levelSchema
+      levelZod
     )
 
     const medium = await gemini(
@@ -131,10 +175,11 @@ async function generateLearningModule({ topic, materia, lessonId }) {
         topic,
         materia,
         contextString,
+        essay,
         previousOutput: easy
       }),
       8192,
-      levelSchema
+      levelZod
     )
 
     const hard = await gemini(
@@ -144,13 +189,14 @@ async function generateLearningModule({ topic, materia, lessonId }) {
         topic,
         materia,
         contextString,
+        essay,
         previousOutput: medium
       }),
       8192,
-      levelSchema
+      levelZod
     )
 
-    const fullDraft = { easy, medium, hard }
+    const fullDraft = { easy, medium, hard, essay }
 
     const reviewed = await gemini(
       contextString,
@@ -169,6 +215,7 @@ async function generateLearningModule({ topic, materia, lessonId }) {
       materia,
       createdAt: new Date(),
       cover: imgLink,
+      essay,
       levels: reviewed
     }
 
@@ -227,4 +274,4 @@ async function createDefaultModules() {
 
 module.exports = { generateLearningModule, createDefaultModules }
 
-// createDefaultModules()
+createDefaultModules()
