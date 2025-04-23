@@ -37,36 +37,35 @@ const levelSchema = jsonSchema({
 })
 
 const promptTemplate = (level, topic, materia, context) => `
-Sei un esperto di "${materia}" con esperienza nella formazione universitaria. Stai progettando un modulo didattico per studenti universitari sul tema: **"${topic}"**, all'interno del corso di "${materia}".
+Sei un esperto di **Diritto Sportivo** (Sports Law) e docente universitario. Devi progettare un modulo didattico per studenti universitari sul tema: **"${topic}"**, all'interno del corso di "${materia}".
 
-Livello: **${level.toUpperCase()}**
-
-Contesto reale tratto da articoli e fonti attuali:
+### Contesto:
+Hai a disposizione una raccolta di fonti, articoli e casi reali tratti dal mondo dello sport e della giustizia sportiva:
 ${context}
 
 ### Obiettivo:
-Crea contenuti efficaci per l'apprendimento, adatti al livello indicato, con una struttura chiara, concetti ben spiegati e quiz stimolanti.
+Aiuta gli studenti a comprendere concetti giuridici chiave legati al diritto sportivo. Crea contenuti originali e coerenti con il livello indicato, utilizzando riferimenti concreti al mondo dello sport, alla normativa vigente e agli organismi di controllo (es. WADA, CAS, FIFA, CONI, FIGC, IOC).
 
 ### Requisiti dell'output:
-Genera un **oggetto JSON** con la seguente struttura:
-- levelTitle: un titolo coerente con il livello e il tema (es. "WADA: Le Basi del Sistema Antidoping")
-- cards: un array di **5 oggetti**, ciascuno con:
-  - title: un titolo breve ma informativo
-  - content: una spiegazione **chiara, ben strutturata, originale**, max 100 parole, **evita ripetizioni** tra le card
-  - quiz: oggetto con:
-    - question: domanda coerente con il contenuto
-    - options: 3 opzioni plausibili e non banali
-    - correctAnswer: una sola risposta corretta
+Restituisci un **oggetto JSON** con questa struttura:
+- levelTitle: titolo coerente con il livello e il focus giuridico (es. "Il Codice WADA: principi e limiti")
+- cards: 5 schede, ciascuna con:
+  - title: titolo breve ma informativo
+  - content: spiegazione originale, chiara e precisa, **massimo 100 parole**, evitando ripetizioni
+  - quiz:
+    - question: una domanda coerente con il contenuto
+    - options: 3 opzioni plausibili
+    - correctAnswer: la risposta corretta
 
-### Guida alla difficoltà (adatta i contenuti!):
-- **EASY** (Livello 1): introduzione generale, definizioni chiave, scopo del tema, comprensione base
-- **MEDIUM** (Livello 2): analisi di casi concreti, esempi reali, piccoli scenari applicativi, differenze tra concetti
-- **HARD** (Livello 3): valutazione critica, approfondimenti normativi o giuridici, confronti internazionali, errori comuni, implicazioni strategiche
+### Livelli:
+- **EASY** = introduzione ai concetti base: giustizia sportiva, enti regolatori, ruolo del diritto nello sport, codice etico
+- **MEDIUM** = applicazioni reali e casi studio: sanzioni disciplinari, ricorsi al TAS/CAS, doping, normativa nazionale e internazionale
+- **HARD** = analisi critica: conflitti giurisdizionali, vuoti normativi, analisi di sentenze, riflessioni etico-giuridiche, interpretazioni controverse
 
 ### Stile:
-Professionale ma accessibile. Spiega i concetti come se ti rivolgessi a studenti curiosi, non esperti. Evita semplificazioni eccessive, ma non usare linguaggio tecnico eccessivo.
+Professionale e accessibile. Coinvolgi studenti di giurisprudenza o management sportivo. Spiega in modo semplice ma preciso. Usa il linguaggio del diritto sportivo, ma evita tecnicismi eccessivi.
 
-Rispondi solo con un oggetto JSON **valido**, nel formato richiesto. Niente testo fuori dal JSON.
+❗ Restituisci solo l'oggetto JSON nel formato richiesto. Nessun testo aggiuntivo.
 `
 
 async function generateLearningModule({ topic, materia, lessonId }) {
@@ -142,7 +141,7 @@ async function createDefaultModules() {
       lessonId: "fagioli-scommesse-quiz-module"
     },
     {
-      topic: "Infiltrazioni mafiose tra Ultras e club calcistici a Milano",
+      topic: "Il caso Mafia & Ultras Curva a Milano",
       materia: "Sports Law",
       lessonId: "ultras-mafia-quiz-module"
     }
