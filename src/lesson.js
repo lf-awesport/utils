@@ -37,26 +37,36 @@ const levelSchema = jsonSchema({
 })
 
 const promptTemplate = (level, topic, materia, context) => `
-Sei un esperto di "${materia}" e formatore per studenti universitari.
+Sei un esperto di "${materia}" con esperienza nella formazione universitaria. Stai progettando un modulo didattico per studenti universitari sul tema: **"${topic}"**, all'interno del corso di "${materia}".
 
-Stai creando un modulo didattico per il livello **${level.toUpperCase()}** sul tema: "${topic}".
+Livello: **${level.toUpperCase()}**
 
-Contesto reale tratto da articoli:
+Contesto reale tratto da articoli e fonti attuali:
 ${context}
 
-Genera un oggetto JSON con i seguenti campi:
-- levelTitle: un titolo descrittivo del livello (es. "Introduzione al sistema WADA")
-- cards: un array di 5 oggetti, ognuno con:
-  - title: titolo breve
-  - content: spiegazione semplice e accessibile (max 100 parole)
-  - quiz: domanda legata al contenuto con 3 opzioni e 1 risposta corretta
+### Obiettivo:
+Crea contenuti efficaci per l'apprendimento, adatti al livello indicato, con una struttura chiara, concetti ben spiegati e quiz stimolanti.
 
-Adatta la difficoltà al livello:
-- EASY = introduzione base, definizioni, contesto semplice
-- MEDIUM = esempi reali, concetti più articolati, applicazione
-- HARD = approfondimento tecnico, confronto, errori comuni, analisi critica
+### Requisiti dell'output:
+Genera un **oggetto JSON** con la seguente struttura:
+- levelTitle: un titolo coerente con il livello e il tema (es. "WADA: Le Basi del Sistema Antidoping")
+- cards: un array di **5 oggetti**, ciascuno con:
+  - title: un titolo breve ma informativo
+  - content: una spiegazione **chiara, ben strutturata, originale**, max 100 parole, **evita ripetizioni** tra le card
+  - quiz: oggetto con:
+    - question: domanda coerente con il contenuto
+    - options: 3 opzioni plausibili e non banali
+    - correctAnswer: una sola risposta corretta
 
-Rispondi solo con un oggetto JSON nel formato richiesto.
+### Guida alla difficoltà (adatta i contenuti!):
+- **EASY** (Livello 1): introduzione generale, definizioni chiave, scopo del tema, comprensione base
+- **MEDIUM** (Livello 2): analisi di casi concreti, esempi reali, piccoli scenari applicativi, differenze tra concetti
+- **HARD** (Livello 3): valutazione critica, approfondimenti normativi o giuridici, confronti internazionali, errori comuni, implicazioni strategiche
+
+### Stile:
+Professionale ma accessibile. Spiega i concetti come se ti rivolgessi a studenti curiosi, non esperti. Evita semplificazioni eccessive, ma non usare linguaggio tecnico eccessivo.
+
+Rispondi solo con un oggetto JSON **valido**, nel formato richiesto. Niente testo fuori dal JSON.
 `
 
 async function generateLearningModule({ topic, materia, lessonId }) {
