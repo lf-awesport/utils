@@ -1,13 +1,21 @@
-const { firestore } = require("../firebase")
 const { generateEmbedding } = require("../embeddings")
 const { gemini } = require("../gemini")
 const { askAgentPrompt } = require("../prompts")
 
 // Mock external dependencies
-jest.mock("../firebase")
 jest.mock("../embeddings")
 jest.mock("../gemini")
 jest.mock("../prompts")
+
+// Mock firebase module with a getter
+const mockFirestore = {
+  collection: jest.fn()
+}
+jest.mock("../firebase", () => ({
+  get firestore() {
+    return mockFirestore
+  }
+}))
 
 const {
   queryRAG,
@@ -68,7 +76,7 @@ describe("queryRAG", () => {
         }))
       })
     }
-    firestore.collection.mockReturnValue(mockCollection)
+    mockFirestore.collection.mockReturnValue(mockCollection)
   })
 
   describe("searchSimilarDocuments", () => {
@@ -108,7 +116,7 @@ describe("queryRAG", () => {
       })
 
       expect(results).toEqual(mockResults)
-      expect(firestore.collection).toHaveBeenCalledWith("test")
+      expect(mockFirestore.collection).toHaveBeenCalledWith("test")
       expect(generateEmbedding).toHaveBeenCalledWith(mockQuery)
     })
 
@@ -124,7 +132,7 @@ describe("queryRAG", () => {
 
       await searchSimilarDocuments(customParams)
 
-      const mockCollection = firestore.collection.mock.results[0].value
+      const mockCollection = mockFirestore.collection.mock.results[0].value
       expect(mockCollection.findNearest).toHaveBeenCalledWith({
         vectorField: "custom_field",
         queryVector: mockEmbedding,
@@ -137,7 +145,7 @@ describe("queryRAG", () => {
 
     it("should handle search errors", async () => {
       const error = new Error("Search failed")
-      firestore.collection.mockImplementationOnce(() => {
+      mockFirestore.collection.mockImplementationOnce(() => {
         throw error
       })
 
@@ -186,10 +194,11 @@ describe("queryRAG", () => {
     })
 
     it("should handle empty search results", async () => {
-      firestore.collection.mockReturnValue({
+      const mockEmptyCollection = {
         findNearest: jest.fn().mockReturnThis(),
         get: jest.fn().mockResolvedValue({ docs: [] })
-      })
+      }
+      mockFirestore.collection.mockReturnValue(mockEmptyCollection)
 
       const result = await queryRAG(mockQuery)
 
@@ -203,39 +212,48 @@ describe("queryRAG", () => {
     })
 
     it("should handle missing optional fields in documents", async () => {
-      const incompleteDoc = {
-        id: "doc3",
-        data: {
-          title: "Test Title 3",
-          vector_distance: 0.9
+      const mockIncompleteResults = [
+        {
+          id: "doc1",
+          data: {
+            title: "Test Title 1",
+            analysis: { cleanText: "Test body 1" },
+            vector_distance: 0.1234
+          }
         }
-      }
+      ]
 
-      firestore.collection.mockReturnValue({
+      const mockIncompleteCollection = {
         findNearest: jest.fn().mockReturnThis(),
         get: jest.fn().mockResolvedValue({
-          docs: [
-            {
-              id: incompleteDoc.id,
-              data: () => incompleteDoc.data,
-              get: () => incompleteDoc.data.vector_distance
-            }
-          ]
+          docs: mockIncompleteResults.map((doc) => ({
+            id: doc.id,
+            data: () => doc.data,
+            get: () => doc.data.vector_distance
+          }))
         })
-      })
+      }
+      mockFirestore.collection.mockReturnValue(mockIncompleteCollection)
 
-      await expect(queryRAG(mockQuery)).resolves.not.toThrow()
+      const result = await queryRAG(mockQuery)
+
+      expect(result.sources[0]).toEqual({
+        id: "doc1",
+        title: "Test Title 1",
+        vector_distance: 0.1234,
+        analysis: {}
+      })
     })
 
     it("should handle Gemini errors", async () => {
-      const error = new Error("Gemini failed")
+      const error = new Error("Gemini error")
       gemini.mockRejectedValueOnce(error)
 
       await expect(queryRAG(mockQuery)).rejects.toThrow(RAGError)
     })
 
     it("should handle embedding generation errors", async () => {
-      const error = new Error("Embedding failed")
+      const error = new Error("Embedding error")
       generateEmbedding.mockRejectedValueOnce(error)
 
       await expect(queryRAG(mockQuery)).rejects.toThrow(RAGError)
