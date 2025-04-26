@@ -4,6 +4,9 @@ const { gemini } = require("./gemini")
 const { askAgentPrompt } = require("./prompts")
 const { generateEmbedding } = require("./embeddings")
 
+/**
+ * JSON schema for the Gemini response
+ */
 const schema = jsonSchema({
   $schema: "http://json-schema.org/draft-04/schema#",
   type: "object",
@@ -15,7 +18,135 @@ const schema = jsonSchema({
   required: ["answer"]
 })
 
-const maxTokens = 8192
+/**
+ * Default configuration values
+ */
+const DEFAULT_CONFIG = {
+  maxTokens: 8192,
+  vectorField: "embedding",
+  distanceMeasure: "COSINE",
+  limit: 25
+}
+
+/**
+ * Error class for RAG-related errors
+ */
+class RAGError extends Error {
+  constructor(message, originalError = null) {
+    super(message)
+    this.name = "RAGError"
+    this.originalError = originalError
+  }
+}
+
+/**
+ * Validates input parameters for the searchSimilarDocuments function
+ * @param {Object} options - The options object
+ * @throws {TypeError} If any parameter is invalid
+ */
+function validateSearchOptions(options) {
+  if (!options || typeof options !== "object") {
+    throw new TypeError("Search options must be an object")
+  }
+
+  const {
+    collectionName,
+    query,
+    vectorField,
+    distanceMeasure,
+    limit,
+    distanceThreshold,
+    filters
+  } = options
+
+  if (
+    typeof collectionName !== "string" ||
+    collectionName.trim().length === 0
+  ) {
+    throw new TypeError("collectionName must be a non-empty string")
+  }
+
+  if (typeof query !== "string" || query.trim().length === 0) {
+    throw new TypeError("query must be a non-empty string")
+  }
+
+  if (
+    vectorField !== undefined &&
+    (typeof vectorField !== "string" || vectorField.trim().length === 0)
+  ) {
+    throw new TypeError("vectorField must be a non-empty string")
+  }
+
+  if (
+    distanceMeasure !== undefined &&
+    !["COSINE", "EUCLIDEAN", "DOT_PRODUCT"].includes(distanceMeasure)
+  ) {
+    throw new TypeError(
+      "distanceMeasure must be one of: COSINE, EUCLIDEAN, DOT_PRODUCT"
+    )
+  }
+
+  if (limit !== undefined && (!Number.isInteger(limit) || limit <= 0)) {
+    throw new TypeError("limit must be a positive integer")
+  }
+
+  if (
+    distanceThreshold !== undefined &&
+    (typeof distanceThreshold !== "number" || isNaN(distanceThreshold))
+  ) {
+    throw new TypeError("distanceThreshold must be a number")
+  }
+
+  if (filters !== undefined && !Array.isArray(filters)) {
+    throw new TypeError("filters must be an array")
+  }
+}
+
+/**
+ * Validates input parameters for the queryRAG function
+ * @param {string} query - The query string
+ * @throws {TypeError} If the query is invalid
+ */
+function validateQuery(query) {
+  if (typeof query !== "string" || query.trim().length === 0) {
+    throw new TypeError("Query must be a non-empty string")
+  }
+}
+
+/**
+ * Formats a document into a context string
+ * @param {Object} doc - The document to format
+ * @returns {string} Formatted context string
+ */
+function formatDocumentContext(doc) {
+  const { data } = doc
+  return `
+TITOLO: ${data.title}
+AUTORE: ${data.author}
+DATA: ${data.date}
+TAGS: ${Array.isArray(data.tags) ? data.tags.join(", ") : ""}
+ESTRATTO: ${data.excerpt}
+BODY: ${data.analysis?.cleanText || ""}
+SCORE: ${(data.vector_distance || 0).toFixed(4)}
+    `
+}
+
+/**
+ * Processes search results to remove sensitive data
+ * @param {Array} results - The search results
+ * @returns {Array} Processed results without sensitive data
+ */
+function processSearchResults(results) {
+  return results.map(({ id, data }) => {
+    const { analysis, ...rest } = data
+    const { cleanText, ...analysisRest } = analysis || {}
+    return {
+      id,
+      ...rest,
+      analysis: analysisRest
+    }
+  })
+}
 
 /**
  * 🔍 Ricerca documenti simili in Firestore Vector Search (con tutti i campi)
@@ -34,85 +165,104 @@ async function searchSimilarDocuments({
   query,
   vectorField = "embedding",
   distanceMeasure = "COSINE",
-  limit = 10,
+  limit = 5,
   distanceThreshold,
-  filters = []
-}) {
+  filters
+} = {}) {
+  // Validate inputs immediately before any async operations
+  validateSearchOptions({
+    collectionName,
+    query,
+    vectorField,
+    distanceMeasure,
+    limit,
+    distanceThreshold,
+    filters
+  })
+
   try {
-    let coll = firestore.collection(collectionName)
+    const queryEmbedding = await generateEmbedding(query)
+    const collection = firestore.collection(collectionName)
 
-    // // Applica eventuali filtri
-    // for (const filter of filters) {
-    //   coll = coll.where(filter.field, filter.op, filter.value)
-    // }
-
-    // 1. Embedding della domanda
-    const queryVector = await generateEmbedding(query)
-
-    // Costruzione query vettoriale
-    const vectorQuery = coll.findNearest({
+    const searchOptions = {
       vectorField,
-      queryVector,
+      queryVector: queryEmbedding,
       limit,
       distanceMeasure,
-      distanceResultField: "vector_distance",
-      ...(distanceThreshold !== undefined ? { distanceThreshold } : {})
-    })
+      distanceResultField: "vector_distance"
+    }
 
-    const snapshot = await vectorQuery.get()
+    if (distanceThreshold !== undefined) {
+      searchOptions.distanceThreshold = distanceThreshold
+    }
 
-    return snapshot.docs.map((doc) => ({
+    if (filters) {
+      searchOptions.filters = filters
+    }
+
+    const querySnapshot = await collection.findNearest(searchOptions).get()
+
+    return querySnapshot.docs.map((doc) => ({
       id: doc.id,
-      data: { ...doc.data(), vector_distance: doc.get("vector_distance") }
+      data: {
+        ...doc.data(),
+        vector_distance: doc.get("vector_distance")
+      }
     }))
   } catch (error) {
-    console.error("❌ Errore in searchSimilarDocuments:", error)
-    throw error
+    throw new RAGError(
+      `Failed to search similar documents: ${error.message}`,
+      error
+    )
   }
 }
 
+/**
+ * Performs RAG (Retrieval-Augmented Generation) query
+ * @param {string} query - The query string
+ * @returns {Promise<Object>} Query results with text and sources
+ * @throws {RAGError} If query fails
+ */
 async function queryRAG(query) {
-  // 2. Vector search
-  const results = await searchSimilarDocuments({
-    query,
-    collectionName: "sentiment",
-    distanceMeasure: "COSINE",
-    limit: 25
-  })
+  try {
+    validateQuery(query)
 
-  // 3. Costruzione contesto per Gemini
-  const context = results
-    .map(
-      ({ data }) => `
-TITOLO: ${data.title}
-AUTORE: ${data.author}
-DATA: ${data.date}
-TAGS: ${Array.isArray(data.tags) ? data.tags.join(", ") : ""}
-ESTRATTO: ${data.excerpt}
-BODY: ${data.analysis?.cleanText || ""}
-SCORE: ${(data.vector_distance || 0).toFixed(4)}
-    `
+    // 2. Vector search
+    const results = await searchSimilarDocuments({
+      query,
+      collectionName: "sentiment",
+      distanceMeasure: DEFAULT_CONFIG.distanceMeasure,
+      limit: DEFAULT_CONFIG.limit
+    })
+
+    // 3. Costruzione contesto per Gemini
+    const context = results
+      .map(formatDocumentContext)
+      .join("\n-----------------------------\n")
+
+    // 4. Chiamata a Gemini
+    const text = await gemini(
+      context,
+      askAgentPrompt(query),
+      DEFAULT_CONFIG.maxTokens,
+      schema
     )
-    .join("\n-----------------------------\n")
 
-  // 4. Chiamata a Gemini
-  const text = await gemini(context, askAgentPrompt(query), maxTokens, schema)
+    // 5. Costruzione array di sources senza il campo BODY
+    const sources = processSearchResults(results)
 
-  // 5. Costruzione array di sources senza il campo BODY
-  const sources = results.map(({ id, data }) => {
-    const { analysis, ...rest } = data
-    const { cleanText, ...analysisRest } = analysis || {}
-    return {
-      id,
-      ...rest,
-      analysis: analysisRest
+    return { text, sources, query }
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw error
     }
-  })
-
-  return { text, sources, query }
+    throw new RAGError("Failed to process RAG query", error)
+  }
 }
 
 module.exports = {
   queryRAG,
-  searchSimilarDocuments
+  searchSimilarDocuments,
+  RAGError,
+  DEFAULT_CONFIG
 }
