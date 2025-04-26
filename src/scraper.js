@@ -7,7 +7,8 @@ const { firestore } = require("./firebase") // ⚠️ Usa Firestore SDK Cloud
  * Default configuration for scrapers
  */
 const CONFIG = {
-  userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
+  userAgent:
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
   pageOptions: {
     waitUntil: "networkidle2",
     timeout: 60000
@@ -73,7 +74,13 @@ class BaseScraper {
         .set({ ...data, processed: false }, { merge: true })
       console.log(`✅ ${data.author}: ${data.url}`)
     } catch (error) {
-      console.error(new ScraperError(`Failed to save article: ${data.url}`, data.author, error))
+      console.error(
+        new ScraperError(
+          `Failed to save article: ${data.url}`,
+          data.author,
+          error
+        )
+      )
     }
   }
 }
@@ -109,11 +116,15 @@ class SBMScraper extends BaseScraper {
           const url = `https://sportbusinessmag.sport-press.it/${year}/page/${pageNum}/`
           await this.goto(page, url)
 
-          const links = await page.$$eval("figure a", els => [...new Set(els.map(el => el.href))])
+          const links = await page.$$eval("figure a", (els) => [
+            ...new Set(els.map((el) => el.href))
+          ])
           if (links.length === 0) break
 
-          const titles = await page.$$eval(".post-content h2.title", els => els.map(el => el.innerText))
-          
+          const titles = await page.$$eval(".post-content h2.title", (els) =>
+            els.map((el) => el.innerText)
+          )
+
           for (let i = 0; i < titles.length; i++) {
             const id = this.generateId(titles[i])
             if (links[i] && this.isValidArticleUrl(links[i])) {
@@ -121,7 +132,9 @@ class SBMScraper extends BaseScraper {
             }
           }
         } catch (error) {
-          console.error(new ScraperError(`Archive error: ${url}`, this.name, error))
+          console.error(
+            new ScraperError(`Archive error: ${url}`, this.name, error)
+          )
         } finally {
           await this.closePage(page)
         }
@@ -135,10 +148,14 @@ class SBMScraper extends BaseScraper {
     try {
       await this.goto(page, url)
 
-      const title = await page.$eval("h1.title", el => el.innerText)
+      const title = await page.$eval("h1.title", (el) => el.innerText)
       const date = this.extractDateFromUrl(url)
-      const imgLink = await page.$eval(".featuredimage > img", el => el.src).catch(() => null)
-      const body = await page.$$eval(".regularcontent p", els => els.map(e => e.innerText).join("\n"))
+      const imgLink = await page
+        .$eval(".featuredimage > img", (el) => el.src)
+        .catch(() => null)
+      const body = await page.$$eval(".regularcontent p", (els) =>
+        els.map((e) => e.innerText).join("\n")
+      )
 
       const data = {
         id: this.generateId(title),
@@ -153,7 +170,9 @@ class SBMScraper extends BaseScraper {
 
       await this.saveArticle(data)
     } catch (error) {
-      console.error(new ScraperError(`Failed to scrape article: ${url}`, this.name, error))
+      console.error(
+        new ScraperError(`Failed to scrape article: ${url}`, this.name, error)
+      )
     } finally {
       await this.closePage(page)
     }
@@ -196,19 +215,28 @@ class DirettaScraper extends BaseScraper {
         const url = `https://www.diretta.it/news/${category}/page-5/`
         await this.goto(page, url)
 
-        const urls = await page.$$eval(".fsNews a", elements =>
+        const urls = await page.$$eval(".fsNews a", (elements) =>
           elements
-            .map(el => el.href)
-            .filter(el => el.includes("https://www.diretta.it/news/") && !el.includes("tracker"))
+            .map((el) => el.href)
+            .filter(
+              (el) =>
+                el.includes("https://www.diretta.it/news/") &&
+                !el.includes("tracker")
+            )
         )
-
 
         for (const url of urls) {
           const id = this.generateId(url)
           await this.checkAndAddUrl(url, id)
         }
       } catch (error) {
-        console.error(new ScraperError(`Failed to scrape category: ${category}`, this.name, error))
+        console.error(
+          new ScraperError(
+            `Failed to scrape category: ${category}`,
+            this.name,
+            error
+          )
+        )
       } finally {
         await this.closePage(page)
       }
@@ -223,18 +251,31 @@ class DirettaScraper extends BaseScraper {
 
       const data = {
         id: this.generateId(url),
-        title: await page.$eval("h1", el => el.innerText),
-        date: (await page.$eval(".wcl-news-caption-01_gHM5e + meta", el => el.content)).split("T")[0],
-        imgLink: await page.$eval(".wcl-image_MVcAW", el => el.src).catch(() => null),
-        excerpt: await page.$eval("div.fsNewsArticle__perex", el => el.innerText).catch(() => ""),
-        body: await page.$$eval("div.fsNewsArticle__content p", els => els.map(e => e.innerText).join("\n")),
+        title: await page.$eval("h1", (el) => el.innerText),
+        date: (
+          await page.$eval(
+            ".wcl-news-caption-01_gHM5e + meta",
+            (el) => el.content
+          )
+        ).split("T")[0],
+        imgLink: await page
+          .$eval(".wcl-image_MVcAW", (el) => el.src)
+          .catch(() => null),
+        excerpt: await page
+          .$eval("div.fsNewsArticle__perex", (el) => el.innerText)
+          .catch(() => ""),
+        body: await page.$$eval("div.fsNewsArticle__content p", (els) =>
+          els.map((e) => e.innerText).join("\n")
+        ),
         url,
         author: this.name
       }
 
       await this.saveArticle(data)
     } catch (error) {
-      console.error(new ScraperError(`Failed to scrape article: ${url}`, this.name, error))
+      console.error(
+        new ScraperError(`Failed to scrape article: ${url}`, this.name, error)
+      )
     } finally {
       await this.closePage(page)
     }
@@ -255,13 +296,21 @@ class CFScraper extends BaseScraper {
     try {
       // Scrape Calcio e Finanza
       await this.goto(page, "https://www.calcioefinanza.it/")
-      const urlsCF = await page.$$eval("article>a", els => els.map(e => e.href))
-      const titlesCF = await page.$$eval(".post-title", els => els.map(e => e.innerText))
+      const urlsCF = await page.$$eval("article>a", (els) =>
+        els.map((e) => e.href)
+      )
+      const titlesCF = await page.$$eval(".post-title", (els) =>
+        els.map((e) => e.innerText)
+      )
 
       // Scrape Sport e Finanza
       await this.goto(page, "https://www.sportefinanza.it/")
-      const urlsSF = await page.$$eval("article>a", els => els.map(e => e.href))
-      const titlesSF = await page.$$eval(".post-title", els => els.map(e => e.innerText))
+      const urlsSF = await page.$$eval("article>a", (els) =>
+        els.map((e) => e.href)
+      )
+      const titlesSF = await page.$$eval(".post-title", (els) =>
+        els.map((e) => e.innerText)
+      )
 
       const allUrls = urlsCF.concat(urlsSF)
       const allTitles = titlesCF.concat(titlesSF)
@@ -271,7 +320,9 @@ class CFScraper extends BaseScraper {
         await this.checkAndAddUrl(allUrls[i], id)
       }
     } catch (error) {
-      console.error(new ScraperError("Failed to scrape archive", this.name, error))
+      console.error(
+        new ScraperError("Failed to scrape archive", this.name, error)
+      )
     } finally {
       await this.closePage(page)
     }
@@ -285,11 +336,15 @@ class CFScraper extends BaseScraper {
 
       const data = {
         id: this.generateId(await page.title()),
-        title: await page.$eval(".a-title>h1", el => el.innerText),
-        date: (await page.$eval(".a-date>time", el => el.dateTime)).split("T")[0],
-        imgLink: await page.$eval(".thumb-img", el => el.src),
-        excerpt: await page.$eval(".a-excerpt p", el => el.innerText),
-        body: await page.$$eval(".txt-block>p", els => els.map(e => e.innerText).join("\n")),
+        title: await page.$eval(".a-title>h1", (el) => el.innerText),
+        date: (await page.$eval(".a-date>time", (el) => el.dateTime)).split(
+          "T"
+        )[0],
+        imgLink: await page.$eval(".thumb-img", (el) => el.src),
+        excerpt: await page.$eval(".a-excerpt p", (el) => el.innerText),
+        body: await page.$$eval(".txt-block>p", (els) =>
+          els.map((e) => e.innerText).join("\n")
+        ),
         url,
         author: this.name
       }
@@ -299,7 +354,9 @@ class CFScraper extends BaseScraper {
 
       await this.saveArticle(data)
     } catch (error) {
-      console.error(new ScraperError(`Failed to scrape article: ${url}`, this.name, error))
+      console.error(
+        new ScraperError(`Failed to scrape article: ${url}`, this.name, error)
+      )
     } finally {
       await this.closePage(page)
     }
@@ -327,17 +384,30 @@ class RUScraper extends BaseScraper {
       for (let pageNum = 1; pageNum <= 3; pageNum++) {
         const page = await this.createPage()
         try {
-          await this.goto(page, `https://www.rivistaundici.com/category/${category}/page/${pageNum}`)
+          await this.goto(
+            page,
+            `https://www.rivistaundici.com/category/${category}/page/${pageNum}`
+          )
 
-          const urls = await page.$$eval(".article-title", els => els.map(el => el.href))
-          const titles = await page.$$eval(".article-title > span", els => els.map(el => el.innerText))
+          const urls = await page.$$eval(".article-title", (els) =>
+            els.map((el) => el.href)
+          )
+          const titles = await page.$$eval(".article-title > span", (els) =>
+            els.map((el) => el.innerText)
+          )
 
           for (let i = 0; i < titles.length; i++) {
             const id = this.generateId(titles[i])
             await this.checkAndAddUrl(urls[i], id)
           }
         } catch (error) {
-          console.error(new ScraperError(`Failed to scrape category: ${category}, page: ${pageNum}`, this.name, error))
+          console.error(
+            new ScraperError(
+              `Failed to scrape category: ${category}, page: ${pageNum}`,
+              this.name,
+              error
+            )
+          )
         } finally {
           await this.closePage(page)
         }
@@ -351,21 +421,28 @@ class RUScraper extends BaseScraper {
     try {
       await this.goto(page, url)
 
-      const dateText = await page.$eval(".article-datetime", el => el.innerText)
+      const dateText = await page.$eval(
+        ".article-datetime",
+        (el) => el.innerText
+      )
       const data = {
         id: this.generateId(await page.title()),
-        title: await page.$eval(".article-title", el => el.innerText),
+        title: await page.$eval(".article-title", (el) => el.innerText),
         date: new Date(dateText).toISOString().split("T")[0],
-        imgLink: await page.$eval(".wp-post-image", el => el.src),
-        excerpt: await page.$eval(".article-summary", el => el.innerText),
-        body: await page.$$eval(".article-content > p", els => els.map(e => e.innerText).join("\n")),
+        imgLink: await page.$eval(".wp-post-image", (el) => el.src),
+        excerpt: await page.$eval(".article-summary", (el) => el.innerText),
+        body: await page.$$eval(".article-content > p", (els) =>
+          els.map((e) => e.innerText).join("\n")
+        ),
         url,
         author: this.name
       }
 
       await this.saveArticle(data)
     } catch (error) {
-      console.error(new ScraperError(`Failed to scrape article: ${url}`, this.name, error))
+      console.error(
+        new ScraperError(`Failed to scrape article: ${url}`, this.name, error)
+      )
     } finally {
       await this.closePage(page)
     }
@@ -385,17 +462,30 @@ class DSScraper extends BaseScraper {
     for (let currentPage = 1; currentPage <= 6; currentPage++) {
       const page = await this.createPage()
       try {
-        await this.goto(page, `https://www.italiaoggi.it/settori/sport?page=${currentPage}`)
+        await this.goto(
+          page,
+          `https://www.italiaoggi.it/settori/sport?page=${currentPage}`
+        )
 
-        const urls = await page.$$eval("h5>a", els => els.map(el => el.href))
-        const titles = await page.$$eval("h5>a", els => els.map(el => el.innerText))
+        const urls = await page.$$eval("h5>a", (els) =>
+          els.map((el) => el.href)
+        )
+        const titles = await page.$$eval("h5>a", (els) =>
+          els.map((el) => el.innerText)
+        )
 
         for (let i = 0; i < titles.length; i++) {
           const id = this.generateId(titles[i])
           await this.checkAndAddUrl(urls[i], id)
         }
       } catch (error) {
-        console.error(new ScraperError(`Failed to scrape page: ${currentPage}`, this.name, error))
+        console.error(
+          new ScraperError(
+            `Failed to scrape page: ${currentPage}`,
+            this.name,
+            error
+          )
+        )
       } finally {
         await this.closePage(page)
       }
@@ -408,27 +498,33 @@ class DSScraper extends BaseScraper {
     try {
       await this.goto(page, url)
 
-      const rawDate = await page.$eval("time", el => {
+      const rawDate = await page.$eval("time", (el) => {
         const dateText = el.outerText.split("DEL").pop().trim()
-        const [day, month, year] = dateText.split("/").map(num => parseInt(num, 10))
+        const [day, month, year] = dateText
+          .split("/")
+          .map((num) => parseInt(num, 10))
         // Create date object with correct month (0-based) and day
-        return new Date(year, month - 1, day).toISOString().split("T")[0]
+        return new Date(year, month - 1, day + 1).toISOString().split("T")[0]
       })
 
       const data = {
         id: this.generateId(await page.title()),
-        title: await page.$eval("h1", el => el.innerText),
+        title: await page.$eval("h1", (el) => el.innerText),
         date: rawDate,
-        imgLink: await page.$eval("figure > img", el => el.src),
-        excerpt: await page.$eval("h2", el => el.innerText),
-        body: await page.$$eval("#articolo p", els => els.map(e => e.innerText).join("\n")),
+        imgLink: await page.$eval("figure > img", (el) => el.src),
+        excerpt: await page.$eval("h2", (el) => el.innerText),
+        body: await page.$$eval("#articolo p", (els) =>
+          els.map((e) => e.innerText).join("\n")
+        ),
         url,
         author: this.name
       }
 
       await this.saveArticle(data)
     } catch (error) {
-      console.error(new ScraperError(`Failed to scrape article: ${url}`, this.name, error))
+      console.error(
+        new ScraperError(`Failed to scrape article: ${url}`, this.name, error)
+      )
     } finally {
       await this.closePage(page)
     }
@@ -469,7 +565,13 @@ async function runAllScrapers() {
       try {
         await scraper.scrapeArchive()
       } catch (error) {
-        console.error(new ScraperError(`Failed to scrape archive for ${scraper.name}`, scraper.name, error))
+        console.error(
+          new ScraperError(
+            `Failed to scrape archive for ${scraper.name}`,
+            scraper.name,
+            error
+          )
+        )
       }
     }
 
@@ -477,22 +579,34 @@ async function runAllScrapers() {
     for (const scraper of scrapers) {
       if (scraper.urls.length === 0) continue
 
-      console.log(`🔍 Processing ${scraper.urls.length} articles from ${scraper.name}`)
-      
+      console.log(
+        `🔍 Processing ${scraper.urls.length} articles from ${scraper.name}`
+      )
+
       try {
         const pool = new Pool(
-          createPromiseProducer(browser, scraper.urls, (b, url) => scraper.scrapeArticle(url)),
+          createPromiseProducer(browser, scraper.urls, (b, url) =>
+            scraper.scrapeArticle(url)
+          ),
           CONFIG.concurrency
         )
         await pool.start()
       } catch (error) {
-        console.error(new ScraperError(`Failed to process articles for ${scraper.name}`, scraper.name, error))
+        console.error(
+          new ScraperError(
+            `Failed to process articles for ${scraper.name}`,
+            scraper.name,
+            error
+          )
+        )
       }
     }
 
     console.log("✅ Finished scraping all articles")
   } catch (error) {
-    console.error(new ScraperError("Fatal error in runAllScrapers", null, error))
+    console.error(
+      new ScraperError("Fatal error in runAllScrapers", null, error)
+    )
   } finally {
     await browser.close()
   }
@@ -516,7 +630,7 @@ async function deletePosts(collection, source) {
     while (!snapshot.empty) {
       const batch = firestore.batch()
 
-      snapshot.docs.slice(count, count + batchSize).forEach(doc => {
+      snapshot.docs.slice(count, count + batchSize).forEach((doc) => {
         batch.delete(doc.ref)
       })
 
@@ -529,7 +643,9 @@ async function deletePosts(collection, source) {
 
     console.log("✅ Cleanup completed")
   } catch (error) {
-    console.error(new ScraperError(`Failed to delete posts from ${source}`, source, error))
+    console.error(
+      new ScraperError(`Failed to delete posts from ${source}`, source, error)
+    )
   }
 }
 
