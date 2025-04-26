@@ -537,5 +537,12 @@ module.exports = {
   runAllScrapers,
   deletePosts,
   ScraperError,
-  CONFIG
+  CONFIG,
+  BaseScraper,
+  SBMScraper,
+  DirettaScraper,
+  CFScraper,
+  RUScraper,
+  DSScraper,
+  createPromiseProducer
 }
