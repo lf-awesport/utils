@@ -3,6 +3,31 @@ const Pool = require("es6-promise-pool")
 const rng = require("seedrandom")
 const { firestore } = require("./firebase") // ⚠️ Usa Firestore SDK Cloud
 
+//helper function to parse italian date
+function parseItalianDate(dateStr) {
+  const months = {
+    gennaio: "01",
+    febbraio: "02",
+    marzo: "03",
+    aprile: "04",
+    maggio: "05",
+    giugno: "06",
+    luglio: "07",
+    agosto: "08",
+    settembre: "09",
+    ottobre: "10",
+    novembre: "11",
+    dicembre: "12"
+  }
+
+  const [day, monthName, year] = dateStr.toLowerCase().split(" ")
+  const month = months[monthName]
+
+  if (!month) throw new Error(`Mese non riconosciuto: ${monthName}`)
+
+  return `${year}-${month}-${day.padStart(2, "0")}`
+}
+
 /**
  * Default configuration for scrapers
  */
@@ -212,7 +237,7 @@ class DirettaScraper extends BaseScraper {
     for (const category of this.categories) {
       const page = await this.createPage()
       try {
-        const url = `https://www.diretta.it/news/${category}/page-5/`
+        const url = `https://www.diretta.it/news/${category}/page-10/`
         await this.goto(page, url)
 
         const urls = await page.$$eval(".fsNews a", (elements) =>
@@ -428,7 +453,7 @@ class RUScraper extends BaseScraper {
       const data = {
         id: this.generateId(await page.title()),
         title: await page.$eval(".article-title", (el) => el.innerText),
-        date: new Date(dateText).toISOString().split("T")[0],
+        date: parseItalianDate(dateText),
         imgLink: await page.$eval(".wp-post-image", (el) => el.src),
         excerpt: await page.$eval(".article-summary", (el) => el.innerText),
         body: await page.$$eval(".article-content > p", (els) =>
@@ -556,8 +581,8 @@ async function runAllScrapers() {
       new SBMScraper(browser),
       new DirettaScraper(browser),
       new CFScraper(browser),
-      new RUScraper(browser),
-      new DSScraper(browser)
+      new DSScraper(browser),
+      new RUScraper(browser)
     ]
 
     // Scrape archives
