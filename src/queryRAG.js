@@ -182,7 +182,6 @@ async function searchSimilarDocuments({
 
   try {
     const queryEmbedding = await generateEmbedding(query)
-    const collection = firestore.collection(collectionName)
 
     const searchOptions = {
       vectorField,
@@ -200,7 +199,16 @@ async function searchSimilarDocuments({
       searchOptions.filters = filters
     }
 
-    const querySnapshot = await collection.findNearest(searchOptions).get()
+    let ref = firestore.collection(collectionName)
+
+    //Per usare i filtri di firestore insieme alla ricerca vettoriale e necessario creare un indice composito
+    if (Array.isArray(filters)) {
+      filters.forEach(({ field, op, value }) => {
+        ref = ref.where(field, op, value)
+      })
+    }
+
+    const querySnapshot = await ref.findNearest(searchOptions).get()
 
     return querySnapshot.docs.map((doc) => ({
       id: doc.id,
@@ -260,9 +268,30 @@ async function queryRAG(query) {
   }
 }
 
+function getDateRangeFilters({ fromYear, fromMonth, toYear, toMonth }) {
+  if (!fromYear && !toYear) return []
+
+  const start = fromYear ? new Date(fromYear, (fromMonth ?? 1) - 1, 1) : null
+
+  const end = toYear ? new Date(toYear, toMonth ?? 12, 1) : null
+
+  if (start && end && start >= end) {
+    throw new Error("Invalid date range: 'from' must be earlier than 'to'.")
+  }
+
+  const format = (d) => d.toISOString().split("T")[0]
+  const filters = []
+
+  if (start) filters.push({ field: "date", op: ">=", value: format(start) })
+  if (end) filters.push({ field: "date", op: "<", value: format(end) })
+
+  return filters
+}
+
 module.exports = {
   queryRAG,
   searchSimilarDocuments,
   RAGError,
-  DEFAULT_CONFIG
+  DEFAULT_CONFIG,
+  getDateRangeFilters
 }

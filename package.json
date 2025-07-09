@@ -29,6 +29,6 @@
   },
   "scripts": {
     "test": "jest",
-    "dev": "nodemon --exec 'npm test && node server.js -p 4000'"
+    "dev": "nodemon --exec 'node server.js -p 4000'"
   }
 }

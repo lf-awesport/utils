@@ -4,7 +4,11 @@ require("dotenv").config({ path: require("find-config")(".env") })
 
 // Import dependencies
 const { processArticles } = require("./src/sentiment.js")
-const { queryRAG, searchSimilarDocuments } = require("./src/queryRAG.js")
+const {
+  queryRAG,
+  searchSimilarDocuments,
+  getDateRangeFilters
+} = require("./src/queryRAG.js")
 const { generateLearningModule } = require("./src/lesson.js")
 const { runAllScrapers } = require("./src/scraper.js")
 
@@ -13,7 +17,7 @@ const config = {
   port: process.env.PORT || 4000,
   maxQueryLength: 500,
   search: {
-    defaultLimit: 10,
+    defaultLimit: 25,
     distanceMeasure: "COSINE",
     collectionName: "sentiment"
   }
@@ -76,11 +80,27 @@ app.post("/askAgent", validateQuery, async (req, res) => {
 
 app.post("/search", validateQuery, async (req, res) => {
   try {
+    const { query, fromYear, fromMonth, fromDay, toYear, toMonth, toDay } =
+      req.body
+
+    function formatDate(y, m, d) {
+      if (!y || !m || !d) return null
+      return `${y.toString().padStart(4, "0")}-${m.toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`
+    }
+
+    const filters = []
+    const fromDate = formatDate(fromYear, fromMonth, fromDay)
+    const toDate = formatDate(toYear, toMonth, toDay)
+
+    if (fromDate) filters.push({ field: "date", op: ">=", value: fromDate })
+    if (toDate) filters.push({ field: "date", op: "<=", value: toDate })
+
     const results = await searchSimilarDocuments({
       collectionName: config.search.collectionName,
-      query: req.body.query,
+      query,
       distanceMeasure: config.search.distanceMeasure,
-      limit: config.search.defaultLimit
+      limit: config.search.defaultLimit,
+      filters
     })
 
     const sources = results.map(({ id, data }) => {
