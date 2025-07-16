@@ -60,7 +60,7 @@ class ScraperError extends Error {
 class BaseScraper {
   constructor(browser) {
     this.browser = browser
-    this.urls = []
+    this.urls = new Set()
   }
 
   async createPage() {
@@ -81,14 +81,56 @@ class BaseScraper {
     return rng(seed)().toString()
   }
 
-  async checkAndAddUrl(url, id) {
+  async checkAndAddUrl(url, id, title = null) {
+    const cleanUrl = url?.trim()
+    const cleanTitle = title?.trim()
+
+    console.log(url)
+
+    // 🔍 1. Check per ID
     const postRef = firestore.collection("posts").doc(id)
     const postSnap = await postRef.get()
-    if (!postSnap.exists) {
-      this.urls.push(url)
-      return true
+
+    if (postSnap.exists) {
+      const existing = postSnap.data()
+      const sameUrl = existing.url?.trim() === cleanUrl
+      const sameTitle = existing.title?.trim() === cleanTitle
+
+      if (sameUrl || sameTitle) {
+        return false
+      }
+      return false
     }
-    return false
+
+    // 🔍 2. Check per URL
+    if (cleanUrl) {
+      const urlSnap = await firestore
+        .collection("posts")
+        .where("url", "==", cleanUrl)
+        .limit(1)
+        .get()
+
+      if (!urlSnap.empty) {
+        return false
+      }
+    }
+
+    // 🔍 3. Check per titolo
+    if (cleanTitle) {
+      const titleSnap = await firestore
+        .collection("posts")
+        .where("title", "==", cleanTitle)
+        .limit(1)
+        .get()
+
+      if (!titleSnap.empty) {
+        return false
+      }
+    }
+
+    // ✅ Se non esiste nessuno dei tre → aggiungi
+    this.urls.add(url)
+    return true
   }
 
   async saveArticle(data) {
@@ -137,8 +179,8 @@ class SBMScraper extends BaseScraper {
     for (let year = startYear; year <= endYear; year++) {
       for (let pageNum = 1; pageNum <= 85; pageNum++) {
         const page = await this.createPage()
+        const url = `https://sportbusinessmag.sport-press.it/${year}/page/${pageNum}/`
         try {
-          const url = `https://sportbusinessmag.sport-press.it/${year}/page/${pageNum}/`
           await this.goto(page, url)
 
           const links = await page.$$eval("figure a", (els) => [
@@ -153,7 +195,7 @@ class SBMScraper extends BaseScraper {
           for (let i = 0; i < titles.length; i++) {
             const id = this.generateId(titles[i])
             if (links[i] && this.isValidArticleUrl(links[i])) {
-              await this.checkAndAddUrl(links[i], id)
+              await this.checkAndAddUrl(links[i], id, titles[i])
             }
           }
         } catch (error) {
@@ -165,7 +207,7 @@ class SBMScraper extends BaseScraper {
         }
       }
     }
-    console.log(`✅ ${this.name}, queue:${this.urls.length}`)
+    console.log(`✅ ${this.name}, queue:${this.urls.size}`)
   }
 
   async scrapeArticle(url) {
@@ -237,7 +279,7 @@ class DirettaScraper extends BaseScraper {
     for (const category of this.categories) {
       const page = await this.createPage()
       try {
-        const url = `https://www.diretta.it/news/${category}/page-10/`
+        const url = `https://www.diretta.it/news/${category}/page-5/`
         await this.goto(page, url)
 
         const urls = await page.$$eval(".fsNews a", (elements) =>
@@ -249,8 +291,11 @@ class DirettaScraper extends BaseScraper {
                 !el.includes("tracker")
             )
         )
-
         for (const url of urls) {
+          if (this.urls.has(url)) {
+            continue // ⚠️ già in queue, salta
+          }
+
           const id = this.generateId(url)
           await this.checkAndAddUrl(url, id)
         }
@@ -266,7 +311,7 @@ class DirettaScraper extends BaseScraper {
         await this.closePage(page)
       }
     }
-    console.log(`✅ ${this.name}, queue: ${this.urls.length}`)
+    console.log(`✅ ${this.name}, queue: ${this.urls.size}`)
   }
 
   async scrapeArticle(url) {
@@ -337,12 +382,20 @@ class CFScraper extends BaseScraper {
         els.map((e) => e.innerText)
       )
 
-      const allUrls = urlsCF.concat(urlsSF)
-      const allTitles = titlesCF.concat(titlesSF)
+      const urls = urlsCF.concat(urlsSF)
+      const titles = titlesCF.concat(titlesSF)
 
-      for (let i = 0; i < allTitles.length; i++) {
-        const id = this.generateId(allTitles[i])
-        await this.checkAndAddUrl(allUrls[i], id)
+      for (let i = 0; i < titles.length; i++) {
+        const title = titles[i]
+        const url = urls[i]
+
+        if (!title || !url) {
+          console.warn(`⚠️ Skipping missing title/url at index ${i}`)
+          continue
+        }
+
+        const id = this.generateId(title)
+        await this.checkAndAddUrl(urls[i], id, titles[i])
       }
     } catch (error) {
       console.error(
@@ -351,7 +404,7 @@ class CFScraper extends BaseScraper {
     } finally {
       await this.closePage(page)
     }
-    console.log(`✅ ${this.name}, queue:${this.urls.length}`)
+    console.log(`✅ ${this.name}, queue:${this.urls.size}`)
   }
 
   async scrapeArticle(url) {
@@ -396,17 +449,17 @@ class RUScraper extends BaseScraper {
     super(browser)
     this.name = "Rivista Undici"
     this.categories = [
-      "media",
+      "calcio",
+      "tennis",
+      "formula-1",
       "lifestyle",
-      "altri-sport",
-      "calcio-internazionale",
-      "serie-a"
+      "altri-sport"
     ]
   }
 
   async scrapeArchive() {
     for (const category of this.categories) {
-      for (let pageNum = 1; pageNum <= 3; pageNum++) {
+      for (let pageNum = 1; pageNum <= 5; pageNum++) {
         const page = await this.createPage()
         try {
           await this.goto(
@@ -414,16 +467,15 @@ class RUScraper extends BaseScraper {
             `https://www.rivistaundici.com/category/${category}/page/${pageNum}`
           )
 
-          const urls = await page.$$eval(".article-title", (els) =>
+          const urls = await page.$$eval("div.article-g > a", (els) =>
             els.map((el) => el.href)
           )
-          const titles = await page.$$eval(".article-title > span", (els) =>
+          const titles = await page.$$eval("h2.title-small", (els) =>
             els.map((el) => el.innerText)
           )
-
           for (let i = 0; i < titles.length; i++) {
             const id = this.generateId(titles[i])
-            await this.checkAndAddUrl(urls[i], id)
+            await this.checkAndAddUrl(urls[i], id, titles[i])
           }
         } catch (error) {
           console.error(
@@ -438,7 +490,7 @@ class RUScraper extends BaseScraper {
         }
       }
     }
-    console.log(`✅ ${this.name}, queue:${this.urls.length}`)
+    console.log(`✅ ${this.name}, queue:${this.urls.size}`)
   }
 
   async scrapeArticle(url) {
@@ -447,16 +499,19 @@ class RUScraper extends BaseScraper {
       await this.goto(page, url)
 
       const dateText = await page.$eval(
-        ".article-datetime",
+        ".author.text-small",
         (el) => el.innerText
       )
       const data = {
         id: this.generateId(await page.title()),
-        title: await page.$eval(".article-title", (el) => el.innerText),
+        title: await page.$eval("h1.title-medium", (el) => el.innerText),
         date: parseItalianDate(dateText),
-        imgLink: await page.$eval(".wp-post-image", (el) => el.src),
-        excerpt: await page.$eval(".article-summary", (el) => el.innerText),
-        body: await page.$$eval(".article-content > p", (els) =>
+        imgLink: await page.$eval(
+          "div.testata-articolo_right > img",
+          (el) => el.src
+        ),
+        excerpt: await page.$eval(".text-secondary", (el) => el.innerText),
+        body: await page.$$eval(".contenuto-articolo > p", (els) =>
           els.map((e) => e.innerText).join("\n")
         ),
         url,
@@ -501,7 +556,7 @@ class DSScraper extends BaseScraper {
 
         for (let i = 0; i < titles.length; i++) {
           const id = this.generateId(titles[i])
-          await this.checkAndAddUrl(urls[i], id)
+          await this.checkAndAddUrl(urls[i], id, titles[i])
         }
       } catch (error) {
         console.error(
@@ -515,7 +570,7 @@ class DSScraper extends BaseScraper {
         await this.closePage(page)
       }
     }
-    console.log(`✅ ${this.name}, queue:${this.urls.length}`)
+    console.log(`✅ ${this.name}, queue:${this.urls.size}`)
   }
 
   async scrapeArticle(url) {
@@ -602,15 +657,15 @@ async function runAllScrapers() {
 
     // Process articles in parallel
     for (const scraper of scrapers) {
-      if (scraper.urls.length === 0) continue
+      if (scraper.urls.size === 0) continue
 
       console.log(
-        `🔍 Processing ${scraper.urls.length} articles from ${scraper.name}`
+        `🔍 Processing ${scraper.urls.size} articles from ${scraper.name}`
       )
 
       try {
         const pool = new Pool(
-          createPromiseProducer(browser, scraper.urls, (b, url) =>
+          createPromiseProducer(browser, Array.from(scraper.urls), (b, url) =>
             scraper.scrapeArticle(url)
           ),
           CONFIG.concurrency
@@ -637,46 +692,8 @@ async function runAllScrapers() {
   }
 }
 
-/**
- * Deletes all posts from a specific source
- */
-async function deletePosts(collection, source) {
-  try {
-    const snapshot = await firestore
-      .collection(collection)
-      .where("author", "==", source)
-      .get()
-
-    console.log(`🔍 Found ${snapshot.size} documents with author = "${source}"`)
-
-    const batchSize = CONFIG.batchSize
-    let count = 0
-
-    while (!snapshot.empty) {
-      const batch = firestore.batch()
-
-      snapshot.docs.slice(count, count + batchSize).forEach((doc) => {
-        batch.delete(doc.ref)
-      })
-
-      await batch.commit()
-      count += batchSize
-      console.log(`🗑️ Deleted ${Math.min(count, snapshot.size)} documents...`)
-
-      if (count >= snapshot.size) break
-    }
-
-    console.log("✅ Cleanup completed")
-  } catch (error) {
-    console.error(
-      new ScraperError(`Failed to delete posts from ${source}`, source, error)
-    )
-  }
-}
-
 module.exports = {
   runAllScrapers,
-  deletePosts,
   ScraperError,
   CONFIG,
   BaseScraper,
