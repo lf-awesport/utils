@@ -137,9 +137,15 @@ SCORE: ${(data.vector_distance || 0).toFixed(4)}
  * @returns {Array} Processed results without sensitive data
  */
 function processSearchResults(results) {
+  const distances = results.map((r) => r.data.vector_distance)
+  const max = Math.max(...distances)
+  const min = Math.min(...distances)
+  const range = max - min || 1 // evita divisione per zero
+
   return results.map(({ id, data }) => {
     const { analysis, ...rest } = data
     const { cleanText, ...analysisRest } = analysis || {}
+
     return {
       id,
       ...rest,
@@ -210,13 +216,28 @@ async function searchSimilarDocuments({
 
     const querySnapshot = await ref.findNearest(searchOptions).get()
 
-    return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      data: {
-        ...doc.data(),
-        vector_distance: doc.get("vector_distance")
+    const results = querySnapshot.docs.map((doc) => {
+      const distance = doc.get("vector_distance")
+      const minDistance = 0.15 // migliore (score 100)
+      const maxDistance = 0.5 // peggiore accettabile (score 1)
+
+      // Calcolo normalizzato inverso
+      const clamped = Math.min(Math.max(distance, minDistance), maxDistance)
+      const similarityRaw =
+        1 - (clamped - minDistance) / (maxDistance - minDistance)
+      const similarityScore = Math.round(similarityRaw * 99 + 1)
+
+      return {
+        id: doc.id,
+        data: {
+          ...doc.data(),
+          vector_distance: distance,
+          similarityScore
+        }
       }
-    }))
+    })
+
+    return results
   } catch (error) {
     throw new RAGError(
       `Failed to search similar documents: ${error.message}`,
