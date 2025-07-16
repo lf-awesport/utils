@@ -214,7 +214,7 @@ async function searchSimilarDocuments({
     const results = querySnapshot.docs.map((doc) => {
       const distance = doc.get("vector_distance")
       const minDistance = 0.2 // migliore (score 100)
-      const maxDistance = 0.5 // peggiore accettabile (score 1)
+      const maxDistance = 0.45 // peggiore accettabile (score 1)
 
       // Calcolo normalizzato inverso
       const clamped = Math.min(Math.max(distance, minDistance), maxDistance)
