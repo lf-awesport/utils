@@ -137,11 +137,6 @@ SCORE: ${(data.vector_distance || 0).toFixed(4)}
  * @returns {Array} Processed results without sensitive data
  */
 function processSearchResults(results) {
-  const distances = results.map((r) => r.data.vector_distance)
-  const max = Math.max(...distances)
-  const min = Math.min(...distances)
-  const range = max - min || 1 // evita divisione per zero
-
   return results.map(({ id, data }) => {
     const { analysis, ...rest } = data
     const { cleanText, ...analysisRest } = analysis || {}
@@ -218,7 +213,7 @@ async function searchSimilarDocuments({
 
     const results = querySnapshot.docs.map((doc) => {
       const distance = doc.get("vector_distance")
-      const minDistance = 0.15 // migliore (score 100)
+      const minDistance = 0.2 // migliore (score 100)
       const maxDistance = 0.5 // peggiore accettabile (score 1)
 
       // Calcolo normalizzato inverso
