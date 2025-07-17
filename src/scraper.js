@@ -85,8 +85,6 @@ class BaseScraper {
     const cleanUrl = url?.trim()
     const cleanTitle = title?.trim()
 
-    console.log(url)
-
     // 🔍 1. Check per ID
     const postRef = firestore.collection("posts").doc(id)
     const postSnap = await postRef.get()
@@ -139,7 +137,6 @@ class BaseScraper {
         .collection("posts")
         .doc(data.id)
         .set({ ...data, processed: false }, { merge: true })
-      console.log(`✅ ${data.author}: ${data.url}`)
     } catch (error) {
       console.error(
         new ScraperError(
