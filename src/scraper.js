@@ -174,7 +174,7 @@ class SBMScraper extends BaseScraper {
     const endYear = mode === "all" ? 2025 : 2025
 
     for (let year = startYear; year <= endYear; year++) {
-      for (let pageNum = 1; pageNum <= 85; pageNum++) {
+      for (let pageNum = 1; pageNum <= 3; pageNum++) {
         const page = await this.createPage()
         const url = `https://sportbusinessmag.sport-press.it/${year}/page/${pageNum}/`
         try {
@@ -609,6 +609,111 @@ class DSScraper extends BaseScraper {
 }
 
 /**
+ * NSS Sports scraper
+ */
+class NSSScraper extends BaseScraper {
+  constructor(browser) {
+    super(browser)
+    this.name = "NSS Sports"
+  }
+
+  async scrapeArchive() {
+    for (let pageNum = 1; pageNum <= 5; pageNum++) {
+      const page = await this.createPage()
+      try {
+        const url = `https://www.nss-sports.com/it/articles/page-${pageNum}`
+        await this.goto(page, url)
+
+        const urls = await page.$$eval("a.o-article-card__link", (els) =>
+          els.map((e) => e.href)
+        )
+        const titles = await page.$$eval("h4.o-article-card-title", (els) =>
+          els.map((e) => e.innerText)
+        )
+
+        for (let i = 0; i < urls.length; i++) {
+          const id = this.generateId(titles[i])
+          await this.checkAndAddUrl(urls[i], id, titles[i])
+        }
+      } catch (error) {
+        console.error(
+          new ScraperError(
+            `Failed to scrape archive page ${pageNum}`,
+            this.name,
+            error
+          )
+        )
+      } finally {
+        await this.closePage(page)
+      }
+    }
+    console.log(`✅ ${this.name}, queue: ${this.urls.size}`)
+  }
+
+  async scrapeArticle(url) {
+    const page = await this.createPage()
+    try {
+      await this.goto(page, url)
+
+      const fullTitle = await page.$eval("h1", (el) => el.innerText)
+      const [title, excerpt] = fullTitle.split("\n").map((part) => part.trim())
+
+      const rawDate = await page.$eval(
+        ".article-category-label",
+        (el) => el.innerText
+      )
+      const match = rawDate.match(/\d{1,2} [A-Za-z]+ \d{4}/)
+      const date = match ? parseItalianDate(match[0]) : null
+
+      // scroll + wait per Lazy Loading Immagini
+      await page.evaluate(async () => {
+        await new Promise((resolve) => {
+          let totalHeight = 0
+          const distance = 200
+          const timer = setInterval(() => {
+            window.scrollBy(0, distance)
+            totalHeight += distance
+            if (totalHeight >= document.body.scrollHeight) {
+              clearInterval(timer)
+              resolve()
+            }
+          }, 100)
+        })
+      })
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      const imgLink =
+        (await page.$eval("#article-wrapper img", (img) => img.src)) ||
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTg069zNlygmPwtQEl0CAwoucC5Xlvo9phUUw&s"
+
+      const bodyParagraphs = await page.$$eval(".post-text > p", (els) =>
+        els.map((el) => el.innerText).filter(Boolean)
+      )
+      const body = bodyParagraphs.join("\n")
+
+      const data = {
+        id: this.generateId(title),
+        title,
+        date,
+        url,
+        imgLink,
+        body,
+        excerpt: excerpt || "",
+        author: this.name
+      }
+
+      await this.saveArticle(data)
+    } catch (error) {
+      console.error(
+        new ScraperError(`Failed to scrape article: ${url}`, this.name, error)
+      )
+    } finally {
+      await this.closePage(page)
+    }
+  }
+}
+
+/**
  * Creates a promise producer for parallel processing
  */
 function createPromiseProducer(browser, urls, scrapeArticle) {
@@ -634,7 +739,8 @@ async function runAllScrapers() {
       new DirettaScraper(browser),
       new CFScraper(browser),
       new DSScraper(browser),
-      new RUScraper(browser)
+      new RUScraper(browser),
+      new NSSScraper(browser)
     ]
 
     // Scrape archives
@@ -699,5 +805,6 @@ module.exports = {
   CFScraper,
   RUScraper,
   DSScraper,
+  NSSScraper,
   createPromiseProducer
 }
