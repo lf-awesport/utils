@@ -321,12 +321,12 @@ class DirettaScraper extends BaseScraper {
         title: await page.$eval("h1", (el) => el.innerText),
         date: (
           await page.$eval(
-            ".wcl-news-caption-01_gHM5e + meta",
+            ".wcl-news-caption-01_w0qls + meta",
             (el) => el.content
           )
         ).split("T")[0],
         imgLink: await page
-          .$eval(".wcl-image_MVcAW", (el) => el.src)
+          .$eval("wcl-picture_xJTTl > img", (el) => el.src)
           .catch(() => null),
         excerpt: await page
           .$eval("div.fsNewsArticle__perex", (el) => el.innerText)
@@ -495,14 +495,40 @@ class RUScraper extends BaseScraper {
     try {
       await this.goto(page, url)
 
+      // Estrai la data nel formato '14 Agosto 2025 alle 15:34'
       const dateText = await page.$eval(
-        ".author.text-small",
+        ".author.text-medium",
         (el) => el.innerText
       )
+      // Regex per estrarre solo la parte data
+      const match = dateText.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/)
+      let isoDate = null
+      if (match) {
+        const [_, day, monthName, year] = match
+        const months = {
+          gennaio: "01",
+          febbraio: "02",
+          marzo: "03",
+          aprile: "04",
+          maggio: "05",
+          giugno: "06",
+          luglio: "07",
+          agosto: "08",
+          settembre: "09",
+          ottobre: "10",
+          novembre: "11",
+          dicembre: "12"
+        }
+        const month = months[monthName.toLowerCase()]
+        if (month) {
+          isoDate = `${year}-${month}-${day.padStart(2, "0")}`
+        }
+      }
+
       const data = {
         id: this.generateId(await page.title()),
         title: await page.$eval("h1.title-medium", (el) => el.innerText),
-        date: parseItalianDate(dateText),
+        date: isoDate,
         imgLink: await page.$eval(
           "div.testata-articolo_right > img",
           (el) => el.src
