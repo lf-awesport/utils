@@ -1,7 +1,7 @@
 const { firestore } = require("./firebase") // usa il client @google-cloud/firestore
 const { jsonSchema } = require("ai")
 const { gemini } = require("./gemini")
-const { rerankDocumentsPrompt, generateAnswerPrompt } = require("./prompts")
+const { generateAnswerPrompt } = require("./prompts")
 const { generateEmbedding } = require("./embeddings")
 
 /**
@@ -26,20 +26,6 @@ const DEFAULT_CONFIG = {
   vectorField: "embedding",
   distanceMeasure: "COSINE",
   limit: 10
-}
-
-async function rewriteSemanticQueryWithGemini(query) {
-  const prompt = `
-Based on the following refined prompt, generate a focused and specific semantic search query.
-The goal is to retrieve the most relevant documents from a vector database.
-
-Refined prompt:
-"${query}"
-
-Return only the optimized query, without explanation.
-  `.trim()
-
-  return await gemini("/", prompt, DEFAULT_CONFIG.maxTokens, schema)
 }
 
 /**
@@ -278,17 +264,9 @@ async function queryRAG(query) {
       .map(formatDocumentContext)
       .join("\n-----------------------------\n")
 
-    // 4. Chiamata a Gemini
-    const rerankedContext = await gemini(
-      context,
-      rerankDocumentsPrompt(query),
-      DEFAULT_CONFIG.maxTokens,
-      schema
-    )
-
     const answer = await gemini(
       context,
-      generateAnswerPrompt(query, rerankedContext.answer),
+      generateAnswerPrompt(query),
       DEFAULT_CONFIG.maxTokens,
       schema
     )
