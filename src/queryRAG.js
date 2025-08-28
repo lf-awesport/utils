@@ -1,7 +1,7 @@
 const { firestore } = require("./firebase") // usa il client @google-cloud/firestore
 const { jsonSchema } = require("ai")
 const { gemini } = require("./gemini")
-const { askAgentPrompt } = require("./prompts")
+const { rerankDocumentsPrompt, generateAnswerPrompt } = require("./prompts")
 const { generateEmbedding } = require("./embeddings")
 
 /**
@@ -26,6 +26,20 @@ const DEFAULT_CONFIG = {
   vectorField: "embedding",
   distanceMeasure: "COSINE",
   limit: 10
+}
+
+async function rewriteSemanticQueryWithGemini(query) {
+  const prompt = `
+Based on the following refined prompt, generate a focused and specific semantic search query.
+The goal is to retrieve the most relevant documents from a vector database.
+
+Refined prompt:
+"${query}"
+
+Return only the optimized query, without explanation.
+  `.trim()
+
+  return await gemini("/", prompt, DEFAULT_CONFIG.maxTokens, schema)
 }
 
 /**
@@ -251,7 +265,7 @@ async function queryRAG(query) {
   try {
     validateQuery(query)
 
-    // 2. Vector search
+    // 3. Ricerca vettoriale con query ottimizzata
     const results = await searchSimilarDocuments({
       query,
       collectionName: "sentiment",
@@ -265,9 +279,16 @@ async function queryRAG(query) {
       .join("\n-----------------------------\n")
 
     // 4. Chiamata a Gemini
-    const text = await gemini(
+    const rerankedContext = await gemini(
       context,
-      askAgentPrompt(query),
+      rerankDocumentsPrompt(query),
+      DEFAULT_CONFIG.maxTokens,
+      schema
+    )
+
+    const answer = await gemini(
+      context,
+      generateAnswerPrompt(query, rerankedContext.answer),
       DEFAULT_CONFIG.maxTokens,
       schema
     )
@@ -275,7 +296,7 @@ async function queryRAG(query) {
     // 5. Costruzione array di sources senza il campo BODY
     const sources = processSearchResults(results)
 
-    return { text, sources, query }
+    return { text: answer, sources, query }
   } catch (error) {
     if (error instanceof TypeError) {
       throw error

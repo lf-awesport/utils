@@ -45,7 +45,11 @@ const SENTIMENT_SCHEMA = jsonSchema({
         tempo_di_lettura_minuti: { type: "integer" },
         spiegazione: { type: "string" }
       },
-      required: ["punteggio_flesch_kincaid", "tempo_di_lettura_minuti", "spiegazione"]
+      required: [
+        "punteggio_flesch_kincaid",
+        "tempo_di_lettura_minuti",
+        "spiegazione"
+      ]
     },
     rilevazione_di_pregiudizio: {
       type: "object",
@@ -155,7 +159,8 @@ function prepareDocument(postId, postData, analysis, embedding) {
     imgLink: postData.imgLink,
     title: postData.title,
     date: postData.date,
-    author: postData.author
+    author: postData.author,
+    body: postData.body
   }
 }
 
@@ -238,7 +243,9 @@ async function processArticles() {
         // Commit batch if size limit reached
         if (count % DEFAULT_CONFIG.batchSize === 0) {
           await batch.commit()
-          console.log(`✅ Committed batch of ${DEFAULT_CONFIG.batchSize} documents`)
+          console.log(
+            `✅ Committed batch of ${DEFAULT_CONFIG.batchSize} documents`
+          )
           batch = firestore.batch()
         }
       } catch (error) {
@@ -256,9 +263,10 @@ async function processArticles() {
 
     console.log(`🎉 Done! Processed and saved ${count} posts out of ${total}`)
   } catch (error) {
-    const finalError = error instanceof SentimentError
-      ? error
-      : new SentimentError("Fatal error in processArticles", error)
+    const finalError =
+      error instanceof SentimentError
+        ? error
+        : new SentimentError("Fatal error in processArticles", error)
     console.error("❌", finalError.message)
     if (finalError.originalError) {
       console.debug("Original error:", finalError.originalError)
