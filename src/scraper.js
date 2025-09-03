@@ -333,7 +333,7 @@ class DirettaScraper extends BaseScraper {
           )
         ).split("T")[0],
         imgLink: await page
-          .$eval("wcl-picture_xJTTl > img", (el) => el.src)
+          .$eval(".wcl-picture_xJTTl > img", (el) => el.src)
           .catch(() => null),
         excerpt: await page
           .$eval("div.fsNewsArticle__perex", (el) => el.innerText)
@@ -764,12 +764,12 @@ async function runAllScrapers() {
   try {
     // Initialize scrapers
     const scrapers = [
-      // new SBMScraper(browser),
-      // new DirettaScraper(browser),
-      // new CFScraper(browser),
-      // new DSScraper(browser),
-      new RUScraper(browser)
-      // new NSSScraper(browser)
+      new SBMScraper(browser),
+      new DirettaScraper(browser),
+      new CFScraper(browser),
+      new DSScraper(browser),
+      new RUScraper(browser),
+      new NSSScraper(browser)
     ]
 
     // Scrape archives
