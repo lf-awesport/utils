@@ -132,6 +132,13 @@ class BaseScraper {
   }
 
   async saveArticle(data) {
+    // Check obbligatori
+    if (!data.body || !data.date || !data.imgLink) {
+      throw new ScraperError(
+        `Articolo non salvato: campo mancante (${!data.body ? "body" : !data.date ? "date" : "imgLink"}) in ${data.url}`,
+        data.author
+      )
+    }
     try {
       await firestore
         .collection("posts")
@@ -496,10 +503,7 @@ class RUScraper extends BaseScraper {
       await this.goto(page, url)
 
       // Estrai la data nel formato '14 Agosto 2025 alle 15:34'
-      const dateText = await page.$eval(
-        ".author.text-medium",
-        (el) => el.innerText
-      )
+      const dateText = await page.$eval(".data", (el) => el.innerText)
       // Regex per estrarre solo la parte data
       const match = dateText.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/)
       let isoDate = null
@@ -540,7 +544,6 @@ class RUScraper extends BaseScraper {
         url,
         author: this.name
       }
-
       await this.saveArticle(data)
     } catch (error) {
       console.error(
@@ -761,12 +764,12 @@ async function runAllScrapers() {
   try {
     // Initialize scrapers
     const scrapers = [
-      new SBMScraper(browser),
-      new DirettaScraper(browser),
-      new CFScraper(browser),
-      new DSScraper(browser),
-      new RUScraper(browser),
-      new NSSScraper(browser)
+      // new SBMScraper(browser),
+      // new DirettaScraper(browser),
+      // new CFScraper(browser),
+      // new DSScraper(browser),
+      new RUScraper(browser)
+      // new NSSScraper(browser)
     ]
 
     // Scrape archives
