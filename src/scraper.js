@@ -743,6 +743,136 @@ class NSSScraper extends BaseScraper {
 }
 
 /**
+ * SportFair scraper
+ */
+class SportFairScraper extends BaseScraper {
+  constructor(browser) {
+    super(browser)
+    this.name = "SportFair"
+    this.categories = [
+      "formula-1",
+      "tennis",
+      "motogp",
+      "calcio",
+      "basket",
+      "ciclismo",
+      "nuoto",
+      "sci",
+      "golf",
+      "motori",
+      "altri-sport",
+      "lifestyle",
+      "gossip"
+    ]
+  }
+
+  async scrapeArchive(maxPages = 3) {
+    for (const category of this.categories) {
+      for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+        const page = await this.createPage()
+        try {
+          const url = `https://www.sportfair.it/${category}/page/${pageNum}`
+          await this.goto(page, url)
+          // Get article URLs from archive page
+          const urls = await page.$$eval("h3.entry__title > a", (els) =>
+            els.map((el) => el.href)
+          )
+          for (const articleUrl of urls) {
+            const id = this.generateId(articleUrl)
+            await this.checkAndAddUrl(articleUrl, id)
+          }
+        } catch (error) {
+          console.error(
+            new ScraperError(
+              `Failed to scrape archive: ${category} page ${pageNum}`,
+              this.name,
+              error
+            )
+          )
+        } finally {
+          await this.closePage(page)
+        }
+      }
+    }
+    console.log(`✅ ${this.name}, queue: ${this.urls.size}`)
+  }
+
+  async scrapeArticle(url) {
+    const page = await this.createPage()
+    try {
+      await this.goto(page, url)
+      const title = await page.$eval("h1", (el) => el.innerText)
+      const body = await page.$$eval("#contSF > p", (els) =>
+        els.map((e) => e.innerText).join("\n")
+      )
+      const dateRaw = await page.$eval(
+        ".post-date > span.meta-text",
+        (el) => el.innerText
+      )
+      // Parse date: "3 Lug 2025 | 16:08"
+      const dateMatch = dateRaw.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/)
+      let isoDate = null
+      if (dateMatch) {
+        const [_, day, monthName, year] = dateMatch
+        const months = {
+          Gen: "01",
+          Gennaio: "01",
+          Feb: "02",
+          Febbraio: "02",
+          Mar: "03",
+          Marzo: "03",
+          Apr: "04",
+          Aprile: "04",
+          Mag: "05",
+          Maggio: "05",
+          Giu: "06",
+          Giugno: "06",
+          Lug: "07",
+          Luglio: "07",
+          Ago: "08",
+          Agosto: "08",
+          Set: "09",
+          Settembre: "09",
+          Ott: "10",
+          Ottobre: "10",
+          Nov: "11",
+          Novembre: "11",
+          Dic: "12",
+          Dicembre: "12"
+        }
+        const month =
+          months[monthName] ||
+          months[
+            monthName.charAt(0).toUpperCase() + monthName.slice(1).toLowerCase()
+          ]
+        if (month) isoDate = `${year}-${month}-${day.padStart(2, "0")}`
+      }
+      const imgLink = await page.$eval("img.wp-post-image", (el) => el.src)
+      const excerpt = await page
+        .$eval("h2", (el) => el.innerText)
+        .catch(() => "")
+      const data = {
+        id: this.generateId(title),
+        title,
+        body,
+        date: isoDate,
+        url,
+        imgLink,
+        excerpt,
+        author: this.name
+      }
+      await this.saveArticle(data)
+    } catch (error) {
+      console.error(
+        new ScraperError(`Failed to scrape article: ${url}`, this.name, error)
+      )
+    } finally {
+      await this.closePage(page)
+    }
+  }
+}
+
+/**
  * Creates a promise producer for parallel processing
  */
 function createPromiseProducer(browser, urls, scrapeArticle) {
@@ -769,7 +899,8 @@ async function runAllScrapers() {
       new CFScraper(browser),
       new DSScraper(browser),
       new RUScraper(browser),
-      new NSSScraper(browser)
+      new NSSScraper(browser),
+      new SportFairScraper(browser)
     ]
 
     // Scrape archives
@@ -835,5 +966,6 @@ module.exports = {
   RUScraper,
   DSScraper,
   NSSScraper,
+  SportFairScraper,
   createPromiseProducer
 }

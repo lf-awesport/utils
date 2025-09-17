@@ -33,20 +33,37 @@ const essayZod = z.object({
 })
 
 const levelInstructions = {
-  easy: `\nIntroduzione ai concetti base del diritto sportivo.\n- Definisci termini fondamentali (es. ordinamento sportivo, CONI, giurisdizione sportiva).\n- Spiega in modo semplice, con esempi concreti ma basilari.\n- NON introdurre norme specifiche o casi complessi.`,
-  medium: `\nApplicazioni pratiche e riferimenti normativi.\n- Focalizzati su regolamenti (es. WADA, Codice di Giustizia Sportiva), ruoli di organi e sanzioni.\n- Fai riferimento a casi reali, ma spiegandoli in modo chiaro.\n- NON ripetere concetti introdotti nell’EASY.`,
-  hard: `\n🧠Approccio critico e avanzato.\n- Analizza dilemmi interpretativi, contraddizioni normative, giurisprudenza e principi UE.\n- Stimola la riflessione giuridica con domande aperte.\n- NON ripetere quanto già spiegato nei livelli precedenti.`
+  easy: `
+📘 **Livello EASY – Introduzione ai concetti base**
+- Definisci i termini fondamentali e le nozioni chiave della materia.
+- Usa esempi semplici e concreti per facilitare la comprensione.
+- NON introdurre normative complesse, tecnicismi o casi avanzati.
+`,
+
+  medium: `
+📗 **Livello MEDIUM – Applicazioni pratiche e riferimenti**
+- Approfondisci regolamenti, strumenti, modelli o casi reali rilevanti.
+- Spiega il funzionamento pratico dei concetti, con riferimenti concreti.
+- NON ripetere concetti già trattati nel livello EASY.
+`,
+
+  hard: `
+📕 **Livello HARD – Approccio critico e avanzato**
+- Analizza dilemmi, contraddizioni, interpretazioni avanzate o implicazioni strategiche.
+- Stimola la riflessione con domande aperte e prospettive interdisciplinari.
+- NON ripetere quanto già spiegato nei livelli precedenti.
+`
 }
 
 const essayPrompt = ({ topic, materia, contextString }) => `
-Sei un esperto di diritto sportivo. Scrivi un breve saggio (max 400 parole) per aiutare uno studente universitario a comprendere il tema: **\"${topic}\"**, all'interno del corso di \"${materia}\".
+Sei un esperto di **${materia}**. Scrivi un breve saggio (max 400 parole) per aiutare uno studente universitario a comprendere il tema: **"${topic}"**, all'interno del corso di "${materia}".
 
-Utilizza un linguaggio accessibile, ma rigoroso e ben strutturato. Lo scopo è preparare lo studente ad affrontare il modulo didattico. Fai riferimento a fatti reali, norme o principi fondamentali rilevanti, ma senza andare troppo nel dettaglio normativo.
+Utilizza un linguaggio accessibile, ma rigoroso e ben strutturato. Lo scopo è preparare lo studente ad affrontare il modulo didattico. Fai riferimento a fatti reali, strumenti, modelli, normative o principi fondamentali rilevanti, ma senza andare troppo nel dettaglio tecnico.
 
 ### Contesto disponibile:
 ${contextString}...
 
-FORMATTA TUTTO IN MARKDOWN SEMANTICO EVIDENZIANDO IN GRASSETTO o IN CORSIVO LE PAROLE CHIAVE.
+FORMATTA TUTTO IN MARKDOWN SEMANTICO EVIDENZIANDO IN **GRASSETTO** o *CORSIVO* le parole chiave.
 
 ❗ Rispondi con un oggetto JSON:
 {
@@ -64,33 +81,26 @@ const promptTemplate = ({
   previousOutput = null
 }) => {
   const additionalContext = previousOutput
-    ? `
-### Output del livello precedente:
-${JSON.stringify(previousOutput)}
-`
+    ? `### Output del livello precedente:\n${JSON.stringify(previousOutput)}\n`
     : ""
 
   const introEssay = essay
-    ? `
-### Saggio introduttivo:
-Titolo: ${essay.title}
-${essay.essay}
-`
+    ? `### Saggio introduttivo:\nTitolo: ${essay.title}\n${essay.essay}\n`
     : ""
 
   return `
-Sei un esperto di Diritto Sportivo e docente universitario. Devi progettare un modulo didattico sul tema **\"${topic}\"**, per il corso di \"${materia}\".
+Sei un esperto di **${materia}** e docente universitario. Devi progettare un modulo didattico sul tema **"${topic}"**, per il corso di "${materia}".
 
 ### Livello: ${level.toUpperCase()}
 ${levelInstructions[level]}
 
 ${additionalContext}
 
-### Contesto (articoli e fonti reali):
+### Contesto (fonti, articoli, riferimenti):
 ${contextString}...
 
 ### Obiettivo:
-Aiuta gli studenti a comprendere concetti chiave del diritto sportivo, in modo coerente con il livello di difficoltà.
+Aiuta gli studenti a comprendere concetti chiave della materia, in modo coerente con il livello di difficoltà.
 
 ### Requisiti output:
 Restituisci un **oggetto JSON**:
@@ -99,7 +109,6 @@ Restituisci un **oggetto JSON**:
   - title
   - content (max 100 parole)
   - quiz: 3 opzioni, 1 corretta
-
 ### Stile:
 Professionale e accessibile. Linguaggio chiaro, rigoroso, adatto a studenti universitari.
 
@@ -113,15 +122,15 @@ Professionale e accessibile. Linguaggio chiaro, rigoroso, adatto a studenti univ
 }
 
 const reviewPrompt = ({ topic, materia, fullDraft }) => `
-Sei un esperto di Diritto Sportivo e instructional designer per moduli educativi.
+Sei un esperto di **${materia}** e instructional designer per moduli educativi.
 
-Hai ricevuto una bozza completa di un modulo didattico sul tema: **\"${topic}\"**, per il corso di \"${materia}\". La bozza è divisa in 3 livelli: EASY, MEDIUM, HARD e contiene un saggio introduttivo.
+Hai ricevuto una bozza completa di un modulo didattico sul tema: **"${topic}"**, per il corso di "${materia}". La bozza è divisa in 3 livelli: EASY, MEDIUM, HARD e contiene un saggio introduttivo.
 
 ### Il tuo compito:
 - Rivedi **interamente** il modulo.
 - Per ogni livello:
   - Riformula il **levelTitle** per renderlo più **specifico e coerente** con i contenuti delle carte.
-  - Mescola **l’ordine delle opzioni del quiz**, mantenendo invariata la risposta corretta.
+  - Mescola **l’ordine delle risposte del quiz**.
   - Mantieni solo 3 cards per livello, evitando ripetizioni di contenuti.
   - Migliora lo stile e la chiarezza se necessario.
 - Rivedi anche il **saggio introduttivo**, assicurandoti che sia coerente, ben scritto e utile a comprendere il tema.
@@ -240,50 +249,67 @@ async function createDefaultModules() {
     {
       topic:
         "Il caso Sinner e il controllo antidoping: ruolo e limiti del sistema WADA",
-      materia: "Sport Law",
+      materia: "Sport Management",
       lessonId: "sinner-wada-quiz-module"
     },
     {
       topic:
-        "Nicolò Fagioli e le scommesse sportive: disciplina, sanzioni e giurisdizione",
-      materia: "Sport Law",
-      lessonId: "fagioli-scommesse-quiz-module"
+        "Crisi finanziaria nei club sportivi: analisi dei bilanci e sostenibilità economica",
+      materia: "Sport Management",
+      lessonId: "crisi-finanziaria-club-sportivi"
     },
     {
       topic:
-        "Ultras, mafia e responsabilità nel calcio italiano: tra ordine pubblico e autonomia sportiva",
-      materia: "Sport Law",
-      lessonId: "ultras-mafia-quiz-module"
+        "Regolamentazione degli Esport: governance, etica e riconoscimento giuridico",
+      materia: "Sport Management",
+      lessonId: "regolamentazione-esport"
     },
     {
       topic:
-        "La Superlega e il Monopolio Federale: concorrenza tra circuiti e sentenza UE",
-      materia: "Sport Law",
-      lessonId: "superlega-monopolio-ue"
+        "Organizzare un evento sportivo internazionale: logistica, stakeholder e impatto",
+      materia: "Sport Management",
+      lessonId: "evento-sportivo-internazionale"
     },
     {
       topic:
-        "Il lavoro sportivo dilettantistico: riforma normativa, sentenze e impatto sulle ASD",
-      materia: "Sport Law",
-      lessonId: "lavoro-sportivo-dilettanti"
+        "Strategie di marketing per club sportivi: branding, digital e fan engagement",
+      materia: "Sport Management",
+      lessonId: "marketing-club-sportivi"
     },
     {
       topic:
-        "Tutela dei minori nello sport: safeguarding, procedimenti speciali e confronto con l’ordinamento penale",
-      materia: "Sport Law",
-      lessonId: "tutela-minori-sport"
+        "Sponsorizzazioni sportive: contratti, attivazioni e ritorno sull’investimento",
+      materia: "Sport Management",
+      lessonId: "sponsorizzazioni-sportive"
     },
     {
       topic:
-        "Illecito sportivo vs. civile: analisi giurisprudenziale e criteri distintivi",
-      materia: "Sport Law",
-      lessonId: "illecito-sportivo-civile"
+        "Sport come strumento di inclusione sociale: progetti, impatti e criticità",
+      materia: "Sport Management",
+      lessonId: "sport-inclusione-sociale"
     },
     {
       topic:
-        "Spionaggio sportivo e fair play: droni, etica e sanzioni nelle competizioni internazionali",
-      materia: "Sport Law",
-      lessonId: "spionaggio-fairplay-sportivo"
+        "Innovazione negli equipaggiamenti sportivi: materiali, sicurezza e regolamenti",
+      materia: "Sport Management",
+      lessonId: "innovazione-equipaggiamenti-sportivi"
+    },
+    {
+      topic:
+        "Turismo sportivo: eventi, destinazioni e impatto economico locale",
+      materia: "Sport Management",
+      lessonId: "turismo-sportivo"
+    },
+    {
+      topic:
+        "Media e sport: diritti televisivi, storytelling e nuovi formati digitali",
+      materia: "Sport Management",
+      lessonId: "media-e-diritti-sportivi"
+    },
+    {
+      topic: "Fan Experience: tecnologie immersive, community e fidelizzazione",
+      materia: "Sport Management",
+      lessonId: "fan-experience-tecnologie"
     }
   ]
 
@@ -305,5 +331,3 @@ async function createDefaultModules() {
 }
 
 module.exports = { generateLearningModule, createDefaultModules }
-
-// createDefaultModules()
