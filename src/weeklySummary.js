@@ -2,14 +2,33 @@
 const { firestore } = require("./firebase")
 const { gemini } = require("./gemini")
 const { z } = require("zod")
+const clg = require("crossword-layout-generator")
 
-// Schema Zod per insight settimanali
-const insightWeeklySchema = z.object({
-  weekTrends: z.array(z.string()), // Trend principali
+// Schema Zod per insight giornalieri e settimanali
+const insightSchema = z.object({
+  trends: z.array(z.string()), // Trend principali per sport business
   insights: z.array(z.string()), // Insight pratici per social manager
-  recommendPosts: z.array(z.string()), // Idee post social media per formazione sport business
-  summary: z.string(), // Riassunto esteso della settimana
+  summary: z.string(), // Riassunto approfondito della settimana/giornata
   articleCount: z.number() // Conteggio articoli
+})
+
+const crosswordSchema = z.object({
+  across: z.record(
+    z.object({
+      clue: z.string(),
+      answer: z.string(),
+      row: z.number(),
+      col: z.number()
+    })
+  ),
+  down: z.record(
+    z.object({
+      clue: z.string(),
+      answer: z.string(),
+      row: z.number(),
+      col: z.number()
+    })
+  )
 })
 
 /**
@@ -41,17 +60,126 @@ function toDateString(date) {
   return date.toISOString().slice(0, 10)
 }
 
+function buildInsightPrompt({ articles, contextString, type }) {
+  const label = type === "daily" ? "giornata" : "settimana"
+  const promptLabel = type === "daily" ? "oggi" : "nella settimana"
+
+  return `Sei un social media manager esperto di sport business e formazione. Analizza gli articoli pubblicati ${promptLabel} e restituisci un oggetto JSON con il seguente formato:
+
+{
+  "trends": ["trend principale 1", "trend principale 2", ...],
+  "insights": ["insight pratico 1", "insight pratico 2", ...],
+  "summary": "Rassegna stampa completa e dettagliata della ${label}, focalizzata esclusivamente su notizie e contenuti rilevanti per il settore sport business. Riassumi in modo chiaro e ordinato i principali fatti, eventi, annunci, iniziative, accordi, investimenti, innovazioni e dichiarazioni emerse ${promptLabel}. Evita qualsiasi riferimento a risultati sportivi o contenuti non legati al business dello sport.",
+  "articleCount": ${articles.length}
+}
+
+### Articoli della ${label}:
+${contextString}
+
+❗ Rispondi solo con l'oggetto JSON, senza saluti o testo extra.
+
+Linee guida per "trends" e "insights":
+- Inserici riferimenti precisi agli articoli, titoli, date, nomi, aziende, organizzazioni, eventi menzionati.
+- Concentrati su contenuti utili per manager, studenti, operatori, stakeholder, aziende, investitori, professionisti del settore sport business.
+- Approfondisci sempre l’impatto economico, gestionale, strategico, digitale, normativo, sociale, innovativo delle notizie.
+`
+}
+
+// Generazione cruciverba con prompt separati per across/down
+async function generateCrosswordFromArticles({ articles, type }) {
+  // Funzione per normalizzare le risposte (rimuove accenti e caratteri non alfanumerici)
+  function normalizeAnswer(str) {
+    return str
+      .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Z0-9]/gi, "")
+      .toUpperCase()
+  }
+  // Prompt semplice: genera solo array [{clue, answer}] in italiano, precisi e formativi
+  const prompt = `🎯 Obiettivo: Genera almeno 12 definizioni e risposte per un cruciverba dedicato alla formazione nel *sport business*.
+
+📌 Formato: Rispondi solo con un array di oggetti in italiano, ciascuno nel formato: [{ clue, answer }]
+
+✍️ Stile richiesto:
+
+📚 Contenuto:
+Le definizioni devono essere un mix bilanciato tra:
+
+1. **Termini specifici**: nomi di manager, città, brand, eventi, tecnologie, regolamenti, ruoli, aziende, progetti, ecc.
+   - Esempi:
+     - “Dove il coccodrillo diventa GOAT per celebrare Djokovic” → *Lacoste*
+     - “La banca che forma family banker con il programma Next” → *Mediolanum*
+     - “Il gruppo acquisito da HEAD per espandere il respiro subacqueo” → *Aqualung*
+   Gli esempi sono solo a scopo illustrativo: NON devono essere riutilizzati come risposta, né copiare le stesse definizioni o risposte.
+
+2. **Concetti generali**: strategie, funzioni, impatti, pratiche, modelli di governance, sostenibilità, innovazione, ecc.
+   - Esempi:
+     - “Quando lo sport incontra il bilancio” → *Sponsorizzazione*
+     - “La funzione che trasforma eventi in esperienze memorabili” → *Marketing*
+     - “Governance sportiva con impatto ESG” → *Sostenibilità*
+   Gli esempi sono solo a scopo illustrativo: NON devono essere riutilizzati come risposta, né copiare le stesse definizioni o risposte.
+
+📎 Fonti:
+
+🚫 Evita:
+
+Fai brillare ogni definizione. Devono essere da manuale, da incorniciare.`
+
+  const contextString = articles
+    .map((a) => `Titolo: ${a.title}\n${a.body ? a.body.substring(0, 500) : ""}`)
+    .join("\n---\n")
+  const entries = await gemini(
+    contextString,
+    prompt,
+    4096,
+    z.array(z.object({ clue: z.string(), answer: z.string() }))
+  )
+  // Filtra risposte duplicate (case-insensitive)
+  const seen = new Set()
+  const filteredEntries = entries
+    .map(e => ({
+      clue: e.clue,
+      answer: normalizeAnswer(e.answer)
+    }))
+    .filter((e) => {
+      const key = e.answer.trim().toUpperCase()
+      // Escludi risposte con spazi o punteggiatura
+      if (/[^A-Z0-9]/i.test(key)) return false
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, 10)
+  // Genera il layout
+  const layout = clg.generateLayout(filteredEntries)
+  // layout.result è un array di oggetti: { clue, answer, startx, starty, position, orientation }
+
+  // Adatta l'output per react-crossword: chiavi numeriche consecutive, row/col base 0
+  const crossword = { across: {}, down: {} }
+  let acrossNum = 1
+  let downNum = 1
+  layout.result.forEach((item) => {
+    const entry = {
+      clue: item.clue,
+      answer: item.answer,
+      row: item.starty - 1,
+      col: item.startx - 1
+    }
+    if (item.orientation === "across") {
+      crossword.across[acrossNum] = entry
+      acrossNum++
+    } else if (item.orientation === "down") {
+      crossword.down[downNum] = entry
+      downNum++
+    }
+  })
+  return crossword
+}
+
 /**
- * Genera insight per una settimana specifica (lunedì-domenica)
+ * Funzione generica per generare e salvare insight per un intervallo di date
  */
-async function generateWeeklySummaryForRange(weekStart) {
-  const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekStart.getDate() + 6)
-  weekEnd.setHours(23, 59, 59, 999)
-
-  const startStr = toDateString(weekStart)
-  const endStr = toDateString(weekEnd)
-
+async function generateSummaryForRange({ startStr, endStr, type = "weekly" }) {
   const postsSnap = await firestore
     .collection("posts")
     .where("date", ">=", startStr)
@@ -61,7 +189,9 @@ async function generateWeeklySummaryForRange(weekStart) {
   const articles = postsSnap.docs.map((doc) => doc.data())
 
   if (articles.length === 0) {
-    console.log("Nessun articolo trovato per la settimana:", startStr)
+    console.log(
+      `Nessun articolo trovato per il periodo: ${startStr} - ${endStr}`
+    )
     return null
   }
 
@@ -69,48 +199,75 @@ async function generateWeeklySummaryForRange(weekStart) {
     .map((a) => `Titolo: ${a.title}\n${a.body ? a.body.substring(0, 500) : ""}`)
     .join("\n---\n")
 
-  const insightPrompt = `
-Sei un social media manager esperto di sport business e formazione. Analizza gli articoli pubblicati nella settimana e restituisci un oggetto JSON con:
-{
-  "weekTrends": ["trend principale 1", ...], // Solo trend rilevanti per il business dello sport (es. innovazione, marketing, governance, digital, sostenibilità, eventi, sponsorship, fan engagement, ecc.)
-  "insights": ["insight pratico 1", ...], // Solo insight utili per chi lavora o studia nel settore sport business (strategie, opportunità, rischi, best practice, casi studio, ecc.)
-  "recommendPosts": ["idea post social 1", ...], // Idee di post social media da proporre su una pagina dedicata alla formazione e informazione sullo sport business (es. approfondimenti su modelli di business, analisi di mercato, interviste a manager, trend digital, ecc.)
-  "summary": "Riassunto esteso e dettagliato della settimana, focalizzato su temi, notizie e discussioni rilevanti per il settore sport business. Evita contenuti generici sullo sport giocato.",
-  "articleCount": ${articles.length}
-}
-
-### Articoli della settimana:
-${contextString}
-
-❗ Rispondi solo con l'oggetto JSON, senza saluti o testo extra. Tutto deve essere rilevante per il business dello sport, la formazione manageriale e le professioni del settore.
-
-Linee guida:
-- Ignora notizie e trend che riguardano solo risultati sportivi, cronaca, gossip o curiosità non legate al business.
-- Concentrati su contenuti utili per manager, studenti, operatori, stakeholder, aziende, investitori, professionisti del settore sport business.
-- Approfondisci sempre l’impatto economico, gestionale, strategico, digitale, normativo, sociale, innovativo delle notizie.
-- Le idee post devono essere utili per una pagina che fa formazione, divulgazione e networking nel mondo sport business.
-`
-
+  const insightPrompt = buildInsightPrompt({ articles, contextString, type })
   const insights = await gemini(
     contextString,
     insightPrompt,
     4096,
-    insightWeeklySchema
+    insightSchema
   )
+  const crossword = await generateCrosswordFromArticles({ articles, type })
+  console.log("Cruciverba generato:", JSON.stringify(crossword, null, 2))
 
-  const insightsDoc = {
-    weekStart: startStr,
-    weekEnd: endStr,
+  const docData = {
     createdAt: new Date(),
-    ...insights
+    ...insights,
+    crossword
   }
-
-  await firestore.collection("weeklySummaries").doc(startStr).set(insightsDoc)
-
-  console.log("✅ Insight generati per settimana:", startStr)
-  return insightsDoc
+  if (type === "weekly") {
+    docData.weekStart = startStr
+    docData.weekEnd = endStr
+    await firestore.collection("weeklySummaries").doc(startStr).set(docData)
+    console.log("✅ Insight e cruciverba generati per settimana:", startStr)
+  } else {
+    docData.day = startStr
+    await firestore.collection("dailySummaries").doc(startStr).set(docData)
+    console.log("✅ Insight e cruciverba generati per il giorno:", startStr)
+  }
+  return docData
 }
 
-module.exports = { testWeeklySummaryTwoWeeks }
+async function generateWeeklySummaryForRange(weekStart) {
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekStart.getDate() + 6)
+  weekEnd.setHours(23, 59, 59, 999)
+  const startStr = toDateString(weekStart)
+  const endStr = toDateString(weekEnd)
+  return await generateSummaryForRange({ startStr, endStr, type: "weekly" })
+}
+
+async function generateDailySummaryForDate(dateStr) {
+  return await generateSummaryForRange({
+    startStr: dateStr,
+    endStr: dateStr,
+    type: "daily"
+  })
+}
+
+/**
+ * Funzione di test: genera report giornaliero per oggi e ieri
+ */
+async function testDailySummary() {
+  const today = new Date()
+  const todayStr = today.toISOString().slice(0, 10)
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().slice(0, 10)
+  const yesterday2 = new Date(today)
+  yesterday2.setDate(today.getDate() - 2)
+  const yesterdayStr2 = yesterday2.toISOString().slice(0, 10)
+
+  console.log("\n--- Report giornaliero di oggi ---")
+  await generateDailySummaryForDate(yesterdayStr2)
+  console.log("\n--- Report giornaliero di ieri ---")
+  await generateDailySummaryForDate(yesterdayStr)
+}
+
+module.exports = {
+  testWeeklySummaryTwoWeeks,
+  generateDailySummaryForDate,
+  testDailySummary
+}
 
 // testWeeklySummaryTwoWeeks() // Esegui il test per 2 settimane consecutive
+testDailySummary()

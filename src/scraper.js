@@ -336,9 +336,9 @@ class DirettaScraper extends BaseScraper {
           .$eval(".wcl-picture_xJTTl > img", (el) => el.src)
           .catch(() => null),
         excerpt: await page
-          .$eval("div.fsNewsArticle__perex", (el) => el.innerText)
+          .$eval("p.wcl-typoNewsPerex_JFWVr", (el) => el.innerText)
           .catch(() => ""),
-        body: await page.$$eval("div.fsNewsArticle__content p", (els) =>
+        body: await page.$$eval("div.fp-body_9caht > p", (els) =>
           els.map((e) => e.innerText).join("\n")
         ),
         url,
