@@ -11,6 +11,7 @@
   "dependencies": {
     "@ai-sdk/google-vertex": "^3.0.16",
     "@google-cloud/firestore": "^7.11.0",
+    "@jaredreisinger/react-crossword": "^5.2.0",
     "ai": "^5.0.30",
     "axios": "^1.7.2",
     "axios-rate-limit": "^1.4.0",
@@ -24,6 +25,8 @@
     "jsonrepair": "^3.8.0",
     "node-cron": "^3.0.3",
     "puppeteer": "^24.6.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "seedrandom": "^3.0.5",
     "serverless-http": "^3.2.0",
     "zod": "^3.24.3"

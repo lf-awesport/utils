@@ -1,4 +1,6 @@
-const puppeteer = require("puppeteer")
+const puppeteerExtra = require('puppeteer-extra');
+const Stealth = require('puppeteer-extra-plugin-stealth');
+puppeteerExtra.use(Stealth());
 const Pool = require("es6-promise-pool")
 const rng = require("seedrandom")
 const { firestore } = require("./firebase") // ⚠️ Usa Firestore SDK Cloud
@@ -886,7 +888,7 @@ function createPromiseProducer(browser, urls, scrapeArticle) {
  * Runs all scrapers to collect and process articles
  */
 async function runAllScrapers() {
-  const browser = await puppeteer.launch({
+  const browser = await puppeteerExtra.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"]
   })
