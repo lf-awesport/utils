@@ -1,6 +1,6 @@
-const puppeteerExtra = require('puppeteer-extra');
-const Stealth = require('puppeteer-extra-plugin-stealth');
-puppeteerExtra.use(Stealth());
+const puppeteerExtra = require("puppeteer-extra")
+const Stealth = require("puppeteer-extra-plugin-stealth")
+puppeteerExtra.use(Stealth())
 const Pool = require("es6-promise-pool")
 const rng = require("seedrandom")
 const { firestore } = require("./firebase") // ⚠️ Usa Firestore SDK Cloud
