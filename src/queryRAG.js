@@ -1,7 +1,7 @@
 const { firestore } = require("./firebase") // usa il client @google-cloud/firestore
 const { jsonSchema } = require("ai")
 const { gemini } = require("./gemini")
-const { generateAnswerPrompt } = require("./prompts")
+const { chatbotSystemPrompt, chatbotContextPrompt } = require("./prompts")
 const { generateEmbedding } = require("./embeddings")
 
 /**
@@ -264,9 +264,13 @@ async function queryRAG(query) {
       .map(formatDocumentContext)
       .join("\n-----------------------------\n")
 
+    const chatbotContext = chatbotContextPrompt(query, context)
+
+    // 4. (MODIFICA QUI) Costruzione del PROMPT FINALE che include sia la domanda che gli articoli
+
     const answer = await gemini(
-      context,
-      generateAnswerPrompt(query),
+      chatbotContext,
+      chatbotSystemPrompt,
       DEFAULT_CONFIG.maxTokens,
       schema
     )

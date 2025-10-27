@@ -3,7 +3,7 @@ const { firestore } = require("./firebase.js")
 const { jsonSchema } = require("ai")
 const axios = require("axios")
 const rateLimit = require("axios-rate-limit")
-const { sentimentAnalysisPrompt } = require("./prompts.js")
+const { sentimentAnalysisSystemPrompt } = require("./prompts.js")
 const { gemini } = require("./gemini.js")
 require("dotenv").config({ path: require("find-config")(".env") })
 const { generateEmbedding } = require("./embeddings.js")
@@ -173,12 +173,13 @@ function prepareDocument(postId, postData, analysis, embedding) {
 async function processArticle(post) {
   const postId = post.id
   const postData = post.data()
+  const context = postData.body
 
   try {
     // 1. Sentiment Analysis
     const analysis = await gemini(
-      postData.body,
-      sentimentAnalysisPrompt,
+      context,
+      sentimentAnalysisSystemPrompt,
       DEFAULT_CONFIG.maxTokens,
       SENTIMENT_SCHEMA
     )
