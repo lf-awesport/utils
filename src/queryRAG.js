@@ -25,7 +25,7 @@ const DEFAULT_CONFIG = {
   maxTokens: 8192,
   vectorField: "embedding",
   distanceMeasure: "COSINE",
-  limit: 10
+  limit: 50
 }
 
 /**
@@ -126,7 +126,7 @@ AUTORE: ${data.author}
 DATA: ${data.date}
 TAGS: ${Array.isArray(data.tags) ? data.tags.join(", ") : ""}
 ESTRATTO: ${data.excerpt}
-BODY: ${data.analysis?.cleanText || ""}
+BODY: ${data.body}
 SCORE: ${(data.vector_distance || 0).toFixed(4)}
     `
 }
