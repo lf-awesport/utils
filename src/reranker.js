@@ -4,69 +4,98 @@ require("dotenv").config({ path: require("find-config")(".env") })
 const { GoogleAuth } = require("google-auth-library")
 
 // --- CONFIGURAZIONE API ---
-// ⚠️ SOSTITUISCI QUESTI VALORI CON I TUOI DATI REALI
 const PROJECT_ID = process.env.PROJECT_ID
-const LOCATION = "global" // O la tua regione
+const LOCATION = "global"
 const RANKING_CONFIG_ID = "default_ranking_config"
 const MODEL_NAME = "semantic-ranker-default@latest"
+
+// Variabili d'ambiente per la Service Account (chiavi separate)
+const CLIENT_EMAIL = process.env.CLIENT_EMAIL
+// La chiave privata è spesso quotata nel file .env; assicuriamoci che sia pulita
+const PRIVATE_KEY = process.env.PRIVATE_KEY
+  ? process.env.PRIVATE_KEY.replace(/\\n/g, "\n")
+  : null
 
 // Lo scope necessario per Discovery Engine/Vertex AI Search
 const SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 
-// Inizializza il client di autenticazione
-const auth = new GoogleAuth({ scopes: SCOPES })
+// 💡 LOGICA DI AUTENTICAZIONE ADATTATA PER CHIAVI SEPARATE
+let authOptions = { scopes: SCOPES }
+
+if (CLIENT_EMAIL && PRIVATE_KEY) {
+  // Se le chiavi separate sono disponibili (scenario di produzione/Service Account)
+  authOptions.credentials = {
+    client_email: CLIENT_EMAIL,
+    private_key: PRIVATE_KEY
+  }
+  console.log(
+    "Credenziali caricate da CLIENT_EMAIL/PRIVATE_KEY (Service Account)."
+  )
+} else if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+  // Fallback all'uso del JSON intero (se lo hai definito, Opzione B precedente)
+  try {
+    authOptions.credentials = JSON.parse(
+      process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+    )
+    console.log("Credenziali caricate da GOOGLE_APPLICATION_CREDENTIALS_JSON.")
+  } catch (e) {
+    console.error("Errore nel parsing della chiave Service Account JSON.")
+  }
+} else {
+  // Fallback all'ADC (gcloud auth application-default login)
+  console.log(
+    "Uso Application Default Credentials (ADC). Assicurati di essere loggato con gcloud."
+  )
+}
+
+// Inizializza il client di autenticazione.
+const auth = new GoogleAuth(authOptions)
 
 /**
  * Genera il token di accesso necessario per le API di Google Cloud.
- * Utilizza la logica delle credenziali predefinite (Application Default Credentials).
  * @returns {Promise<string>} Il token di accesso.
  */
 async function getAccessToken() {
   const client = await auth.getClient()
   const accessToken = await client.getAccessToken()
-  // Il token di accesso è contenuto nella proprietà 'token'
+
   if (!accessToken || !accessToken.token) {
     throw new Error(
-      "Impossibile ottenere il token di accesso. Controlla le credenziali."
+      "Impossibile ottenere il token di accesso. Controlla le credenziali (Service Account, ADC, e permessi)."
     )
   }
   return accessToken.token
 }
 
 /**
- * Esegue la chiamata all'API di Reranking di Vertex AI Search per ordinare i documenti.
- * * @param {string} userQuery - La query dell'utente da usare per il reranking.
- * @param {Array<Object>} documents - Gli articoli candidati recuperati da Firestore.
- * @param {string} documents[].id - ID univoco del documento Firestore.
- * @param {string} documents[].title - Titolo dell'articolo.
- * @param {string} documents[].rerank_summary - Il riassunto generato da Gemini.
- * @returns {Promise<Array<Object>>} L'elenco degli articoli ordinati con i loro score.
+ * Esegue la chiamata all'API di Reranking di Vertex AI Search.
  */
 async function rerankDocuments(userQuery, documents) {
-  // Endpoint basato sulla documentazione Vertex AI Search
   const url = `https://discoveryengine.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/rankingConfigs/${RANKING_CONFIG_ID}:rank`
 
-  // Mappa i tuoi documenti nel formato 'records' richiesto dall'API
-  // Il campo 'content' è il tuo 'rerank_summary'
   const apiRecords = documents.map((doc) => ({
     id: doc.id,
     title: doc.title || "",
     content: doc.rerank_summary
   }))
 
-  // Il limite massimo è 200 record per richiesta.
   const finalRecords = apiRecords.slice(0, 200)
+
+  if (finalRecords.length === 0) {
+    console.warn("Nessun record valido da inviare al reranker.")
+    return []
+  }
 
   const payload = {
     model: MODEL_NAME,
     query: userQuery,
     records: finalRecords,
-    topN: 10, // Restituisce i primi N risultati più rilevanti
-    ignoreRecordDetailsInResponse: true // Opzionale: riduce il payload di risposta
+    topN: 25,
+    ignoreRecordDetailsInResponse: true
   }
 
   console.log(
-    `\nInvio ${finalRecords.length} record per il reranking con la query: "${userQuery.substring(0, 40)}..."`
+    `\nInvio ${finalRecords.length} record per il reranking con la query: "${userQuery.substring(0, Math.min(userQuery.length, 40))}..."`
   )
 
   try {
@@ -83,10 +112,8 @@ async function rerankDocuments(userQuery, documents) {
     console.log(
       `Rerank completato. Ricevuti ${response.data.records.length} risultati ranked.`
     )
-    // response.data.records è l'array ordinato: [{id: "...", score: 0.98}, ...]
     return response.data.records
   } catch (error) {
-    // Log dettagliato dell'errore
     if (error.response) {
       console.error(
         `\n🚨 Errore API di Reranking (${error.response.status}):`,

@@ -1,11 +1,12 @@
-const { firestore } = require("./firebase") // usa il client @google-cloud/firestore
+const { firestore } = require("./firebase") // Firebase/Firestore client (@google-cloud/firestore)
 const { jsonSchema } = require("ai")
 const { gemini } = require("./gemini")
 const { chatbotSystemPrompt, chatbotContextPrompt } = require("./prompts")
 const { generateEmbedding } = require("./embeddings")
+const { rerankDocuments } = require("./reranker")
 
 /**
- * JSON schema for the Gemini response
+ * JSON schema per la risposta di Gemini, forzando un formato oggetto con la chiave 'answer'.
  */
 const schema = jsonSchema({
   $schema: "http://json-schema.org/draft-04/schema#",
@@ -19,17 +20,18 @@ const schema = jsonSchema({
 })
 
 /**
- * Default configuration values
+ * Valori di configurazione predefiniti.
+ * - limit: Numero massimo di candidati da recuperare da Vector Search (prima del Rerank).
  */
 const DEFAULT_CONFIG = {
   maxTokens: 8192,
   vectorField: "embedding",
   distanceMeasure: "COSINE",
-  limit: 50
+  limit: 100
 }
 
 /**
- * Error class for RAG-related errors
+ * Classe di errore personalizzata per la gestione degli errori RAG.
  */
 class RAGError extends Error {
   constructor(message, originalError = null) {
@@ -40,9 +42,9 @@ class RAGError extends Error {
 }
 
 /**
- * Validates input parameters for the searchSimilarDocuments function
- * @param {Object} options - The options object
- * @throws {TypeError} If any parameter is invalid
+ * Validates input parameters for the searchSimilarDocuments function.
+ * @param {Object} options - The options object.
+ * @throws {TypeError} If any parameter is invalid.
  */
 function validateSearchOptions(options) {
   if (!options || typeof options !== "object") {
@@ -103,9 +105,9 @@ function validateSearchOptions(options) {
 }
 
 /**
- * Validates input parameters for the queryRAG function
- * @param {string} query - The query string
- * @throws {TypeError} If the query is invalid
+ * Validates input parameters for the queryRAG function.
+ * @param {string} query - The query string.
+ * @throws {TypeError} If the query is invalid.
  */
 function validateQuery(query) {
   if (typeof query !== "string" || query.trim().length === 0) {
@@ -114,31 +116,60 @@ function validateQuery(query) {
 }
 
 /**
- * Formats a document into a context string
- * @param {Object} doc - The document to format
- * @returns {string} Formatted context string
+ * Formatta un documento in una stringa di contesto ottimizzata per l'LLM.
+ * Include lo score di reranking/vettoriale e il contenuto.
+ * @param {Object} doc - Il documento da formattare.
+ * @returns {string} Stringa di contesto formattata.
  */
 function formatDocumentContext(doc) {
   const { data } = doc
+
+  // Contenuto ottimizzato (summary o excerpt) usato per lo score/rilevanza
+  const optimizedContent =
+    data.rerank_summary ||
+    data.excerpt ||
+    data.analysis?.cleanText || // In caso estremo, usa cleanText come fallback
+    "Contenuto non disponibile."
+
+  // Corpo completo dell'articolo, che presumibilmente è in data.analysis.cleanText.
+  const fullBody = data.analysis?.cleanText || null
+
+  // Se il contenuto ottimizzato è diverso dal corpo completo, aggiungiamo il corpo intero
+  const fullBodySection =
+    fullBody && fullBody !== optimizedContent
+      ? `\n\nTESTO COMPLETO DELL'ARTICOLO: ${fullBody}`
+      : ""
+
+  const score =
+    data.rerank_score !== undefined
+      ? data.rerank_score
+      : data.vector_distance || 0
+
+  const contentSource = data.rerank_summary
+    ? "TESTO OTTIMIZZATO (SUMMARY)"
+    : "TESTO OTTIMIZZATO (EXCERPT)"
+  const scoreLabel =
+    data.rerank_score !== undefined ? "SCORE RERANK" : "SCORE VETTORIALE"
+
   return `
 TITOLO: ${data.title}
 AUTORE: ${data.author}
 DATA: ${data.date}
 TAGS: ${Array.isArray(data.tags) ? data.tags.join(", ") : ""}
-ESTRATTO: ${data.excerpt}
-BODY: ${data.body}
-SCORE: ${(data.vector_distance || 0).toFixed(4)}
+${scoreLabel}: ${score.toFixed(4)}
+${contentSource}: ${optimizedContent}
+${fullBodySection}
     `
 }
 
 /**
- * Processes search results to remove sensitive data
- * @param {Array} results - The search results
- * @returns {Array} Processed results without sensitive data
+ * Processa i risultati di ricerca per rimuovere dati sensibili (come l'embedding o il testo completo per il reranking).
+ * @param {Array<Object>} results - I risultati della ricerca.
+ * @returns {Array<Object>} Risultati processati.
  */
 function processSearchResults(results) {
   return results.map(({ id, data }) => {
-    const { analysis, ...rest } = data
+    const { analysis, rerank_summary, rerank_score, ...rest } = data
     const { cleanText, ...analysisRest } = analysis || {}
 
     return {
@@ -150,27 +181,19 @@ function processSearchResults(results) {
 }
 
 /**
- * 🔍 Ricerca documenti simili in Firestore Vector Search (con tutti i campi)
- * @param {Object} options
- * @param {string} options.collectionName - Nome della collezione (es. "sentiment")
- * @param {number[]} options.queryVector - L'embedding della query (es. da Vertex AI)
- * @param {string} [options.vectorField="embedding"] - Campo dell'embedding nel documento
- * @param {string} [options.distanceMeasure="COSINE"] - COSINE | EUCLIDEAN | DOT_PRODUCT
- * @param {number} [options.limit=25] - Numero massimo di risultati
- * @param {number} [options.distanceThreshold] - Soglia sulla distanza (dipende dal tipo)
- * @param {Array<{ field: string, op: FirebaseFirestore.WhereFilterOp, value: any }>} [options.filters] - Eventuali filtri Firestore
- * @returns {Promise<Array<{ id: string, data: any, vector_distance?: number }>>}
+ * 🔍 Ricerca documenti simili in Firestore Vector Search.
+ * @param {Object} options - Opzioni di ricerca.
+ * @returns {Promise<Array<Object>>} Array di documenti trovati con distanza vettoriale.
  */
 async function searchSimilarDocuments({
   collectionName,
   query,
   vectorField = "embedding",
   distanceMeasure = "COSINE",
-  limit = 5,
+  limit = DEFAULT_CONFIG.limit,
   distanceThreshold,
   filters
 } = {}) {
-  // Validate inputs immediately before any async operations
   validateSearchOptions({
     collectionName,
     query,
@@ -196,13 +219,8 @@ async function searchSimilarDocuments({
       searchOptions.distanceThreshold = distanceThreshold
     }
 
-    if (filters) {
-      searchOptions.filters = filters
-    }
-
     let ref = firestore.collection(collectionName)
 
-    //Per usare i filtri di firestore insieme alla ricerca vettoriale e necessario creare un indice composito
     if (Array.isArray(filters)) {
       filters.forEach(({ field, op, value }) => {
         ref = ref.where(field, op, value)
@@ -213,10 +231,9 @@ async function searchSimilarDocuments({
 
     const results = querySnapshot.docs.map((doc) => {
       const distance = doc.get("vector_distance")
-      const minDistance = 0.2 // migliore (score 100)
-      const maxDistance = 0.45 // peggiore accettabile (score 1)
+      const minDistance = 0.2
+      const maxDistance = 0.45
 
-      // Calcolo normalizzato inverso
       const clamped = Math.min(Math.max(distance, minDistance), maxDistance)
       const similarityRaw =
         1 - (clamped - minDistance) / (maxDistance - minDistance)
@@ -242,57 +259,91 @@ async function searchSimilarDocuments({
 }
 
 /**
- * Performs RAG (Retrieval-Augmented Generation) query
- * @param {string} query - The query string
- * @returns {Promise<Object>} Query results with text and sources
- * @throws {RAGError} If query fails
+ * 🤖 Esegue la query RAG (Retrieval-Augmented Generation).
+ * 1. Cerca candidati (Vector Search).
+ * 2. Riorganizza i candidati (Reranking).
+ * 3. Invia i migliori al modello LLM (Generation).
+ * @param {string} query - La query dell'utente.
+ * @returns {Promise<Object>} Risultati con testo di risposta e fonti.
+ * @throws {RAGError} In caso di fallimento della query.
  */
 async function queryRAG(query) {
   try {
     validateQuery(query)
 
-    // 3. Ricerca vettoriale con query ottimizzata
-    const results = await searchSimilarDocuments({
+    const candidateResults = await searchSimilarDocuments({
       query,
       collectionName: "sentiment",
       distanceMeasure: DEFAULT_CONFIG.distanceMeasure,
       limit: DEFAULT_CONFIG.limit
     })
 
-    // 3. Costruzione contesto per Gemini
-    const context = results
+    const rerankRecords = candidateResults
+      .filter((doc) => doc.data.rerank_summary || doc.data.excerpt)
+      .map((doc) => ({
+        id: doc.id,
+        title: doc.data.title || "",
+        rerank_summary: doc.data.rerank_summary || doc.data.excerpt
+      }))
+
+    const rankedResults = await rerankDocuments(query, rerankRecords)
+
+    const candidateMap = new Map(candidateResults.map((doc) => [doc.id, doc]))
+
+    const finalRankedDocs = rankedResults
+      .map((rankedDoc) => {
+        const originalDoc = candidateMap.get(rankedDoc.id)
+        if (originalDoc) {
+          originalDoc.data.rerank_score = rankedDoc.score
+          return originalDoc
+        }
+        return null
+      })
+      .filter((doc) => doc !== null)
+      .slice(0, 25)
+
+    const context = finalRankedDocs
       .map(formatDocumentContext)
       .join("\n-----------------------------\n")
 
     const chatbotContext = chatbotContextPrompt(query, context)
 
-    // 4. (MODIFICA QUI) Costruzione del PROMPT FINALE che include sia la domanda che gli articoli
-
-    const answer = await gemini(
+    const answerObject = await gemini(
       chatbotContext,
       chatbotSystemPrompt,
       DEFAULT_CONFIG.maxTokens,
       schema
     )
 
-    // 5. Costruzione array di sources senza il campo BODY
-    const sources = processSearchResults(results)
+    const sources = processSearchResults(finalRankedDocs)
 
-    return { text: answer, sources, query }
+    return { text: answerObject.answer, sources, query }
   } catch (error) {
     if (error instanceof TypeError) {
       throw error
     }
+    console.error("RAG Query Failed:", error.message, error.originalError)
     throw new RAGError("Failed to process RAG query", error)
   }
 }
 
+/**
+ * Genera i filtri Firestore per un intervallo di date.
+ * @param {Object} params - Parametri per l'intervallo di date.
+ * @returns {Array<Object>} Array di filtri Firestore.
+ * @throws {Error} Se l'intervallo di date non è valido.
+ */
 function getDateRangeFilters({ fromYear, fromMonth, toYear, toMonth }) {
   if (!fromYear && !toYear) return []
 
   const start = fromYear ? new Date(fromYear, (fromMonth ?? 1) - 1, 1) : null
 
-  const end = toYear ? new Date(toYear, toMonth ?? 12, 1) : null
+  const endYear = toYear
+  const endMonth = toMonth ? toMonth : 12
+  const nextMonth = endMonth === 12 ? 1 : endMonth + 1
+  const nextYear = endMonth === 12 ? endYear + 1 : endYear
+
+  const end = toYear ? new Date(nextYear, nextMonth - 1, 1) : null
 
   if (start && end && start >= end) {
     throw new Error("Invalid date range: 'from' must be earlier than 'to'.")
