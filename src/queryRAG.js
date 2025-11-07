@@ -300,6 +300,7 @@ async function queryRAG(query) {
         return null
       })
       .filter((doc) => doc !== null)
+      .filter((doc) => doc.data.rerank_score > 0.149) // 👈 Filtra solo i documenti con uno score di reranking alto
       .slice(0, 25)
 
     const context = finalRankedDocs

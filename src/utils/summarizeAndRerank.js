@@ -8,9 +8,9 @@ const { z } = require("zod")
 
 // --- CONFIGURAZIONE E COSTANTI ---
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-const GEMINI_DELAY_MS = 20000
-const BATCH_READ_SIZE = 5 // Dimensione dei blocchi di lettura da Firestore
-const BATCH_WRITE_SIZE = 50 // Dimensione del batch di scrittura Firestore (max 500)
+const GEMINI_DELAY_MS = 2000
+const BATCH_READ_SIZE = 500 // Dimensione dei blocchi di lettura da Firestore
+const BATCH_WRITE_SIZE = 100 // Dimensione del batch di scrittura Firestore (max 500)
 
 // 💡 PROMPT AGGIORNATO: Forza un formato narrativo non strutturato (no JSON/liste) e richiede la data.
 const PROMPT = `Riassumi il seguente articolo in una lunga e dettagliata narrazione coerente e fluida. Il contenuto deve includere: la data di pubblicazione, la tesi principale, i concetti chiave, e le implicazioni strategiche, nomi, cifre e riferimenti precisi nel modo piu completo e dettagliato possibile. Il suo unico scopo è essere utilizzato come input per un modello di reranking per la ricerca di pertinenza. Non usare citazioni dirette. RESTITUISCI SOLO E SOLTANTO il testo del riassunto, SENZA NESSUNA EVIDENZIAZIONE, etichetta o formattazione strutturata (es. JSON o liste puntate).`
@@ -122,7 +122,6 @@ async function summarizeAndRerankAll() {
       )
       try {
         const summary = await summarizeSingleArticle(data)
-        console.log(summary)
         if (summary) {
           dbBatch.update(doc.ref, { rerank_summary: summary })
           dbBatchCount++

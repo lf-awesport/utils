@@ -86,6 +86,7 @@ function createGeminiModel() {
       structuredOutputs: true,
       temperature: 0,
       topP: 0,
+      topK: 1,
       safetySettings: DEFAULT_SAFETY_SETTINGS
     })
   } catch (error) {

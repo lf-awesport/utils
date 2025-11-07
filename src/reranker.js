@@ -28,24 +28,13 @@ if (CLIENT_EMAIL && PRIVATE_KEY) {
     client_email: CLIENT_EMAIL,
     private_key: PRIVATE_KEY
   }
-  console.log(
-    "Credenziali caricate da CLIENT_EMAIL/PRIVATE_KEY (Service Account)."
-  )
 } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
   // Fallback all'uso del JSON intero (se lo hai definito, Opzione B precedente)
   try {
     authOptions.credentials = JSON.parse(
       process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
     )
-    console.log("Credenziali caricate da GOOGLE_APPLICATION_CREDENTIALS_JSON.")
-  } catch (e) {
-    console.error("Errore nel parsing della chiave Service Account JSON.")
-  }
-} else {
-  // Fallback all'ADC (gcloud auth application-default login)
-  console.log(
-    "Uso Application Default Credentials (ADC). Assicurati di essere loggato con gcloud."
-  )
+  } catch (e) {}
 }
 
 // Inizializza il client di autenticazione.
@@ -94,10 +83,6 @@ async function rerankDocuments(userQuery, documents) {
     ignoreRecordDetailsInResponse: true
   }
 
-  console.log(
-    `\nInvio ${finalRecords.length} record per il reranking con la query: "${userQuery.substring(0, Math.min(userQuery.length, 40))}..."`
-  )
-
   try {
     const accessToken = await getAccessToken()
 
@@ -109,9 +94,6 @@ async function rerankDocuments(userQuery, documents) {
       }
     })
 
-    console.log(
-      `Rerank completato. Ricevuti ${response.data.records.length} risultati ranked.`
-    )
     return response.data.records
   } catch (error) {
     if (error.response) {
