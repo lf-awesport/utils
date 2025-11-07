@@ -307,7 +307,13 @@ async function queryRAG(query) {
       .map(formatDocumentContext)
       .join("\n-----------------------------\n")
 
-    const chatbotContext = chatbotContextPrompt(query, context)
+    const currentDate = new Date().toLocaleDateString("it-IT", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    })
+
+    const chatbotContext = chatbotContextPrompt(query, context, currentDate)
 
     const answerObject = await gemini(
       chatbotContext,

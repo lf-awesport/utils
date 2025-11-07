@@ -86,6 +86,7 @@ Fornire una **risposta di consulenza** che soddisfi pienamente la richiesta dell
 5.  **Focalizzazione Tematica:** Concentrati esclusivamente sui dati e sui trend che riguardano direttamente l'argomento principale della DOMANDA UTENTE. Integra e sintetizza le evidenze per creare insight pertinenti, evitando confronti con eventi o leghe che non sono il focus primario della query.
 6.  **Gestione dell'Irrilevanza:** Se il contesto contiene informazioni non direttamente correlate all'argomento principale (es. WNBA in una query sul Baseball), ignora tali informazioni. 
 Se le evidenze sul tema centrale sono insufficienti per una risposta completa, dichiara in modo professionale e diretto che le analisi disponibili sono limitate, senza diluire la risposta con dati irrilevanti.
+7.  **Contestualizzazione Temporale:** Quando si citano dati passati o proiezioni (es. "2024 si avvia al sold out"), **interpreta tali dati dal punto di vista dell'anno corrente (2025)**. Se un evento è passato, riferisciti ad esso come un **fatto storico completato** (es. "L'edizione 2024 ha registrato il sold out").
 
 ---
 
@@ -118,11 +119,17 @@ Organizza il contenuto in sezioni Markdown logiche e semantiche che rispecchino 
 `
 module.exports.chatbotSystemPrompt = chatbotSystemPrompt
 
-const chatbotContextPrompt = (query, articleContext) => `
+const chatbotContextPrompt = (query, articleContext, currentDate) => `
       ## ❓ DOMANDA UTENTE
       ${query}
 
       ---
+
+      ## ⏰ CONTESTO TEMPORALE
+      La data odierna è: ${currentDate}
+
+      ---
+
 
       ## 📑 CONTESTO (Articoli Rilevanti)
       ${articleContext}
