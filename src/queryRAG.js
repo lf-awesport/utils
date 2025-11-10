@@ -1,6 +1,5 @@
 const { firestore } = require("./firebase") // Firebase/Firestore client (@google-cloud/firestore)
 const { jsonSchema } = require("ai")
-const { gemini } = require("./gemini")
 const { chatbotSystemPrompt, chatbotContextPrompt } = require("./prompts")
 const { generateEmbedding } = require("./embeddings")
 const { rerankDocuments } = require("./reranker")
@@ -323,6 +322,9 @@ async function queryRAG(query, { stream = false } = {}) {
     )
     let previous = ""
     let buffer = ""
+    // Minimum requirements for a sentence to be considered valid
+    const MIN_WORDS = 4
+    const MIN_CHARS = 20
     async function* mapChunks() {
       for await (const chunk of streamIterable) {
         const current = chunk.text || chunk.answer || ""
@@ -338,13 +340,20 @@ async function queryRAG(query, { stream = false } = {}) {
           // Include the punctuation
           const emit = buffer.slice(0, sentenceEnd + 1)
           buffer = buffer.slice(sentenceEnd + 1)
-          yield { text: emit }
+          // Check sentence length
+          const wordCount = emit.trim().split(/\s+/).length
+          if (emit.trim().length >= MIN_CHARS && wordCount >= MIN_WORDS) {
+            yield { text: emit }
+          }
           sentenceEnd = buffer.search(/[.!?](\s|$)/)
         }
       }
       // Emit any remaining buffer at the end
       if (buffer.trim()) {
-        yield { text: buffer }
+        const wordCount = buffer.trim().split(/\s+/).length
+        if (buffer.trim().length >= MIN_CHARS && wordCount >= MIN_WORDS) {
+          yield { text: buffer }
+        }
       }
       // Yield sources last
       yield { sources: processSearchResults(finalRankedDocs) }
