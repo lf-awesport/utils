@@ -272,7 +272,6 @@ async function processArticles() {
             .collection("crosswords")
             .doc(post.id)
             .set({ crossword, createdAt: new Date() })
-          console.log(`🧩 Cruciverba salvato per articolo ${post.id}`)
         } catch (err) {
           console.warn(
             `⚠️ Cruciverba non generato per articolo ${post.id}: ${err.message}`
