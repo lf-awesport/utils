@@ -7,6 +7,8 @@ const { sentimentAnalysisSystemPrompt } = require("./prompts.js")
 const { gemini } = require("./gemini.js")
 require("dotenv").config({ path: require("find-config")(".env") })
 const { generateEmbedding } = require("./embeddings.js")
+const { summarizeSingleArticle } = require("./utils/summarizeAndRerank.js")
+const { generateCrosswordFromArticles } = require("./utils/crossword.js")
 
 /**
  * Default configuration for sentiment analysis
@@ -192,8 +194,18 @@ async function processArticle(post) {
     const fullText = generateFullText(postData, analysis)
     const embedding = await generateEmbedding(fullText)
 
-    // 3. Prepare document
-    return prepareDocument(postId, postData, analysis, embedding)
+    // 3. Generate rerank summary
+    // Prepara i dati come saranno salvati (analysis incluso)
+    const docData = {
+      ...postData,
+      analysis
+    }
+    const rerank_summary = await summarizeSingleArticle(docData)
+
+    // 4. Prepare document
+    const doc = prepareDocument(postId, postData, analysis, embedding)
+    doc.rerank_summary = rerank_summary
+    return doc
   } catch (error) {
     throw new SentimentError(`Failed to process article ${postId}`, error)
   }
@@ -248,6 +260,23 @@ async function processArticles() {
             `✅ Committed batch of ${DEFAULT_CONFIG.batchSize} documents`
           )
           batch = firestore.batch()
+        }
+
+        // Dopo il salvataggio, genera e salva il cruciverba per l'articolo
+        try {
+          const crossword = await generateCrosswordFromArticles({
+            articles: [processedDoc],
+            type: "single"
+          })
+          await firestore
+            .collection("crosswords")
+            .doc(post.id)
+            .set({ crossword, createdAt: new Date() })
+          console.log(`🧩 Cruciverba salvato per articolo ${post.id}`)
+        } catch (err) {
+          console.warn(
+            `⚠️ Cruciverba non generato per articolo ${post.id}: ${err.message}`
+          )
         }
       } catch (error) {
         console.warn(`⚠️ Skipping article ${post.id}: ${error.message}`)

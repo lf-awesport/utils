@@ -161,6 +161,4 @@ async function summarizeAndRerankAll() {
   console.log(`Totale saltati (già riassunti): ${totalSkipped}`)
 }
 
-module.exports = { summarizeAndRerankAll, summarizeSingleArticle }
-
-summarizeAndRerankAll()
+module.exports = { summarizeSingleArticle }
