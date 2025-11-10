@@ -70,11 +70,24 @@ app.use(express.json())
 // Routes
 app.post("/askAgent", validateQuery, async (req, res) => {
   try {
-    const answer = await queryRAG(req.body.q)
-    res.json(answer)
+    res.setHeader("Content-Type", "text/event-stream")
+    res.setHeader("Cache-Control", "no-cache")
+    res.setHeader("Connection", "keep-alive")
+    res.setHeader("Access-Control-Allow-Origin", "*")
+    for await (const chunk of await queryRAG(req.body.q, { stream: true })) {
+      if (chunk.sources) {
+        res.write(`data: ${JSON.stringify({ sources: chunk.sources })}\n\n`)
+      } else {
+        let text =
+          chunk.text || chunk.answer || (typeof chunk === "string" ? chunk : "")
+        res.write(`data: ${JSON.stringify({ text })}\n\n`)
+      }
+    }
+    res.end()
   } catch (error) {
     console.error("❌ Error in /askAgent:", error)
-    res.status(500).json({ error: error.message })
+    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`)
+    res.end()
   }
 })
 

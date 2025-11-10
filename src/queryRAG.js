@@ -267,70 +267,99 @@ async function searchSimilarDocuments({
  * @returns {Promise<Object>} Risultati con testo di risposta e fonti.
  * @throws {RAGError} In caso di fallimento della query.
  */
-async function queryRAG(query) {
-  try {
-    validateQuery(query)
 
-    const candidateResults = await searchSimilarDocuments({
-      query,
-      collectionName: "sentiment",
-      distanceMeasure: DEFAULT_CONFIG.distanceMeasure,
-      limit: DEFAULT_CONFIG.limit
+async function queryRAG(query, { stream = false } = {}) {
+  validateQuery(query)
+
+  const candidateResults = await searchSimilarDocuments({
+    query,
+    collectionName: "sentiment",
+    distanceMeasure: DEFAULT_CONFIG.distanceMeasure,
+    limit: DEFAULT_CONFIG.limit
+  })
+
+  const rerankRecords = candidateResults
+    .filter((doc) => doc.data.rerank_summary || doc.data.excerpt)
+    .map((doc) => ({
+      id: doc.id,
+      title: doc.data.title || "",
+      rerank_summary: doc.data.rerank_summary || doc.data.excerpt
+    }))
+
+  const rankedResults = await rerankDocuments(query, rerankRecords)
+  const candidateMap = new Map(candidateResults.map((doc) => [doc.id, doc]))
+  const finalRankedDocs = rankedResults
+    .map((rankedDoc) => {
+      const originalDoc = candidateMap.get(rankedDoc.id)
+      if (originalDoc) {
+        originalDoc.data.rerank_score = rankedDoc.score
+        return originalDoc
+      }
+      return null
     })
+    .filter((doc) => doc !== null)
+    .filter((doc) => doc.data.rerank_score > 0.149)
+    .slice(0, 25)
 
-    const rerankRecords = candidateResults
-      .filter((doc) => doc.data.rerank_summary || doc.data.excerpt)
-      .map((doc) => ({
-        id: doc.id,
-        title: doc.data.title || "",
-        rerank_summary: doc.data.rerank_summary || doc.data.excerpt
-      }))
+  const context = finalRankedDocs
+    .map(formatDocumentContext)
+    .join("\n-----------------------------\n")
+  const currentDate = new Date().toLocaleDateString("it-IT", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  })
+  const chatbotContext = chatbotContextPrompt(query, context, currentDate)
 
-    const rankedResults = await rerankDocuments(query, rerankRecords)
-
-    const candidateMap = new Map(candidateResults.map((doc) => [doc.id, doc]))
-
-    const finalRankedDocs = rankedResults
-      .map((rankedDoc) => {
-        const originalDoc = candidateMap.get(rankedDoc.id)
-        if (originalDoc) {
-          originalDoc.data.rerank_score = rankedDoc.score
-          return originalDoc
+  if (stream) {
+    // Streaming mode: return async iterable directly (AI SDK v6 idiomatic)
+    const { gemini } = require("./gemini")
+    const streamIterable = await gemini(
+      chatbotContext,
+      chatbotSystemPrompt,
+      DEFAULT_CONFIG.maxTokens,
+      schema,
+      { stream: true }
+    )
+    let previous = ""
+    let buffer = ""
+    async function* mapChunks() {
+      for await (const chunk of streamIterable) {
+        const current = chunk.text || chunk.answer || ""
+        // Only the new part
+        const delta = current.startsWith(previous)
+          ? current.slice(previous.length)
+          : current
+        previous = current
+        buffer += delta
+        // Emit only full sentences (ending with . ! ?)
+        let sentenceEnd = buffer.search(/[.!?](\s|$)/)
+        while (sentenceEnd !== -1) {
+          // Include the punctuation
+          const emit = buffer.slice(0, sentenceEnd + 1)
+          buffer = buffer.slice(sentenceEnd + 1)
+          yield { text: emit }
+          sentenceEnd = buffer.search(/[.!?](\s|$)/)
         }
-        return null
-      })
-      .filter((doc) => doc !== null)
-      .filter((doc) => doc.data.rerank_score > 0.149) // 👈 Filtra solo i documenti con uno score di reranking alto
-      .slice(0, 25)
-
-    const context = finalRankedDocs
-      .map(formatDocumentContext)
-      .join("\n-----------------------------\n")
-
-    const currentDate = new Date().toLocaleDateString("it-IT", {
-      year: "numeric",
-      month: "long",
-      day: "numeric"
-    })
-
-    const chatbotContext = chatbotContextPrompt(query, context, currentDate)
-
+      }
+      // Emit any remaining buffer at the end
+      if (buffer.trim()) {
+        yield { text: buffer }
+      }
+      // Yield sources last
+      yield { sources: processSearchResults(finalRankedDocs) }
+    }
+    return mapChunks()
+  } else {
+    // Non-streaming mode
     const answerObject = await gemini(
       chatbotContext,
       chatbotSystemPrompt,
       DEFAULT_CONFIG.maxTokens,
       schema
     )
-
     const sources = processSearchResults(finalRankedDocs)
-
     return { text: answerObject.answer, sources, query }
-  } catch (error) {
-    if (error instanceof TypeError) {
-      throw error
-    }
-    console.error("RAG Query Failed:", error.message, error.originalError)
-    throw new RAGError("Failed to process RAG query", error)
   }
 }
 

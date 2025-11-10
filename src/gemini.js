@@ -1,6 +1,6 @@
 const { createVertex } = require("@ai-sdk/google-vertex")
+const { generateObject, streamObject } = require("ai")
 require("dotenv").config({ path: require("find-config")(".env") })
-const { generateObject } = require("ai")
 
 /**
  * Default safety settings for the Gemini model
@@ -113,35 +113,50 @@ try {
  * @throws {GeminiError} If generation fails
  * @throws {TypeError} If parameters are invalid
  */
-async function gemini(content, prompt, maxTokens, schema) {
-  // Input validation
+async function gemini(
+  content,
+  prompt,
+  maxTokens,
+  schema,
+  { stream = false } = {}
+) {
   validateInput(content, prompt, maxTokens, schema)
 
-  try {
-    const { object } = await generateObject({
+  if (stream) {
+    // Streaming mode: return partialObjectStream directly (AI SDK v6 idiomatic)
+    const { partialObjectStream } = streamObject({
       model: generativeModel,
       system: prompt.trim(),
       prompt: content.trim(),
       maxTokens,
       schema
     })
+    return partialObjectStream
+  } else {
+    // Non-streaming mode
+    try {
+      const { object } = await generateObject({
+        model: generativeModel,
+        system: prompt.trim(),
+        prompt: content.trim(),
+        maxTokens,
+        schema
+      })
 
-    if (!object) {
-      throw new GeminiError("Received empty response from API")
-    }
+      if (!object) {
+        throw new GeminiError("Received empty response from API")
+      }
 
-    return object
-  } catch (error) {
-    // If it's a TypeError from schema validation, propagate it
-    if (error instanceof TypeError) {
-      throw error
+      return object
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw error
+      }
+      if (error instanceof GeminiError) {
+        throw error
+      }
+      throw new GeminiError("Failed to generate response", error)
     }
-    // If it's already a GeminiError, propagate it
-    if (error instanceof GeminiError) {
-      throw error
-    }
-    // Otherwise, wrap it in a GeminiError
-    throw new GeminiError("Failed to generate response", error)
   }
 }
 
