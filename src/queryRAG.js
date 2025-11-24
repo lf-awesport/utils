@@ -131,7 +131,7 @@ function formatDocumentContext(doc) {
     "Contenuto non disponibile."
 
   // Corpo completo dell'articolo, che presumibilmente è in data.analysis.cleanText.
-  const fullBody = data.analysis?.cleanText || null
+  const fullBody = data.body || null
 
   // Se il contenuto ottimizzato è diverso dal corpo completo, aggiungiamo il corpo intero
   const fullBodySection =
@@ -311,14 +311,6 @@ async function searchAndRerank(query) {
   const chatbotContext = chatbotContextPrompt(query, context, currentDate)
 
   return chatbotContext
-
-  // const { gemini } = require("./gemini")
-  // const streamIterable = await gemini(
-  //   chatbotContext,
-  //   chatbotSystemPrompt,
-  //   DEFAULT_CONFIG.maxTokens,
-  //   schema,
-  //   )
 }
 
 /**

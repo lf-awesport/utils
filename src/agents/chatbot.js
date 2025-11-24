@@ -1,28 +1,33 @@
-const { Experimental_Agent: Agent, tool } = require("ai")
+const { Experimental_Agent: Agent, tool, stepCountIs } = require("ai")
 const z = require("zod")
 const { createGeminiModel } = require("../gemini")
 const { searchAndRerank } = require("../queryRAG")
-const {
-  agentDecisionSystemPrompt,
-  chatbotSystemPrompt
-} = require("../prompts.js")
+const { agentDecisionSystemPrompt } = require("../prompts.js")
 
 /**
  * Agent for deciding between RAG and LLM response
  * Uses your custom Gemini logic for LLM responses
  */
+
 const chatbot = new Agent({
   model: createGeminiModel(),
-  system: chatbotSystemPrompt
-  // tools: {
-  //   testTool: tool({
-  //     description: "Restituisce una risposta di test fissa.",
-  //     inputSchema: z.object({}),
-  //     execute: async () => {
-  //       return { output: "Risposta dal tool di test!" }
-  //     }
-  //   })
-  // }
+  system: agentDecisionSystemPrompt,
+  tools: {
+    searchContext: tool({
+      description:
+        "Cerca informazioni aggiuntive e fornisce contesto rilevante usando search e rerank. Usa questo tool solo se la domanda richiede dati, fonti, o analisi contestuale. NON spiegare che userai uno strumento: usalo e basta.",
+      inputSchema: z.object({
+        query: z.string().describe("La domanda o il tema da cercare")
+      }),
+      execute: async ({ query }) => {
+        const results = await searchAndRerank(query)
+        return {
+          context: results
+        }
+      }
+    })
+  },
+  stopWhen: stepCountIs(2)
 })
 
 module.exports = chatbot
