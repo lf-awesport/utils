@@ -5,10 +5,10 @@ require("dotenv").config({ path: require("find-config")(".env") })
 // Import dependencies
 const { processArticles } = require("./src/sentiment.js")
 const {
-  queryRAG,
   searchSimilarDocuments,
   getDateRangeFilters
 } = require("./src/queryRAG.js")
+const chatbot = require("./src/agents/chatbot.js")
 const { generateLearningModule } = require("./src/lesson.js")
 const { runAllScrapers } = require("./src/scraper.js")
 
@@ -74,7 +74,8 @@ app.post("/askAgent", validateQuery, async (req, res) => {
     res.setHeader("Cache-Control", "no-cache")
     res.setHeader("Connection", "keep-alive")
     res.setHeader("Access-Control-Allow-Origin", "*")
-    for await (const chunk of await queryRAG(req.body.q, { stream: true })) {
+    const streamResult = chatbot.stream({ prompt: req.body.q })
+    for await (const chunk of streamResult.fullStream) {
       if (chunk.sources) {
         res.write(`data: ${JSON.stringify({ sources: chunk.sources })}\n\n`)
       } else {

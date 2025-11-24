@@ -1,6 +1,6 @@
 const { firestore } = require("./firebase") // Firebase/Firestore client (@google-cloud/firestore)
 const { jsonSchema } = require("ai")
-const { chatbotSystemPrompt, chatbotContextPrompt } = require("./prompts")
+const { chatbotContextPrompt } = require("./prompts")
 const { generateEmbedding } = require("./embeddings")
 const { rerankDocuments } = require("./reranker")
 
@@ -267,7 +267,7 @@ async function searchSimilarDocuments({
  * @throws {RAGError} In caso di fallimento della query.
  */
 
-async function queryRAG(query, { stream = false } = {}) {
+async function searchAndRerank(query) {
   validateQuery(query)
 
   const candidateResults = await searchSimilarDocuments({
@@ -310,66 +310,15 @@ async function queryRAG(query, { stream = false } = {}) {
   })
   const chatbotContext = chatbotContextPrompt(query, context, currentDate)
 
-  if (stream) {
-    // Streaming mode: return async iterable directly (AI SDK v6 idiomatic)
-    const { gemini } = require("./gemini")
-    const streamIterable = await gemini(
-      chatbotContext,
-      chatbotSystemPrompt,
-      DEFAULT_CONFIG.maxTokens,
-      schema,
-      { stream: true }
-    )
-    let previous = ""
-    let buffer = ""
-    // Minimum requirements for a sentence to be considered valid
-    const MIN_WORDS = 4
-    const MIN_CHARS = 20
-    async function* mapChunks() {
-      for await (const chunk of streamIterable) {
-        const current = chunk.text || chunk.answer || ""
-        // Only the new part
-        const delta = current.startsWith(previous)
-          ? current.slice(previous.length)
-          : current
-        previous = current
-        buffer += delta
-        // Emit only full sentences (ending with . ! ?)
-        let sentenceEnd = buffer.search(/[.!?](\s|$)/)
-        while (sentenceEnd !== -1) {
-          // Include the punctuation
-          const emit = buffer.slice(0, sentenceEnd + 1)
-          buffer = buffer.slice(sentenceEnd + 1)
-          // Check sentence length
-          const wordCount = emit.trim().split(/\s+/).length
-          if (emit.trim().length >= MIN_CHARS && wordCount >= MIN_WORDS) {
-            yield { text: emit }
-          }
-          sentenceEnd = buffer.search(/[.!?](\s|$)/)
-        }
-      }
-      // Emit any remaining buffer at the end
-      if (buffer.trim()) {
-        const wordCount = buffer.trim().split(/\s+/).length
-        if (buffer.trim().length >= MIN_CHARS && wordCount >= MIN_WORDS) {
-          yield { text: buffer }
-        }
-      }
-      // Yield sources last
-      yield { sources: processSearchResults(finalRankedDocs) }
-    }
-    return mapChunks()
-  } else {
-    // Non-streaming mode
-    const answerObject = await gemini(
-      chatbotContext,
-      chatbotSystemPrompt,
-      DEFAULT_CONFIG.maxTokens,
-      schema
-    )
-    const sources = processSearchResults(finalRankedDocs)
-    return { text: answerObject.answer, sources, query }
-  }
+  return chatbotContext
+
+  // const { gemini } = require("./gemini")
+  // const streamIterable = await gemini(
+  //   chatbotContext,
+  //   chatbotSystemPrompt,
+  //   DEFAULT_CONFIG.maxTokens,
+  //   schema,
+  //   )
 }
 
 /**
@@ -404,9 +353,8 @@ function getDateRangeFilters({ fromYear, fromMonth, toYear, toMonth }) {
 }
 
 module.exports = {
-  queryRAG,
   searchSimilarDocuments,
+  searchAndRerank,
   RAGError,
-  DEFAULT_CONFIG,
   getDateRangeFilters
 }

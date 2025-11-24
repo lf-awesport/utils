@@ -113,50 +113,31 @@ try {
  * @throws {GeminiError} If generation fails
  * @throws {TypeError} If parameters are invalid
  */
-async function gemini(
-  content,
-  prompt,
-  maxTokens,
-  schema,
-  { stream = false } = {}
-) {
+async function gemini(content, prompt, maxTokens, schema) {
   validateInput(content, prompt, maxTokens, schema)
-
-  if (stream) {
-    // Streaming mode: return partialObjectStream directly (AI SDK v6 idiomatic)
-    const { partialObjectStream } = streamObject({
+  // Non-streaming mode
+  try {
+    const { object } = await generateObject({
       model: generativeModel,
       system: prompt.trim(),
       prompt: content.trim(),
       maxTokens,
       schema
     })
-    return partialObjectStream
-  } else {
-    // Non-streaming mode
-    try {
-      const { object } = await generateObject({
-        model: generativeModel,
-        system: prompt.trim(),
-        prompt: content.trim(),
-        maxTokens,
-        schema
-      })
 
-      if (!object) {
-        throw new GeminiError("Received empty response from API")
-      }
-
-      return object
-    } catch (error) {
-      if (error instanceof TypeError) {
-        throw error
-      }
-      if (error instanceof GeminiError) {
-        throw error
-      }
-      throw new GeminiError("Failed to generate response", error)
+    if (!object) {
+      throw new GeminiError("Received empty response from API")
     }
+
+    return object
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw error
+    }
+    if (error instanceof GeminiError) {
+      throw error
+    }
+    throw new GeminiError("Failed to generate response", error)
   }
 }
 
@@ -164,5 +145,5 @@ module.exports = {
   gemini,
   GeminiError,
   DEFAULT_SAFETY_SETTINGS,
-  createGeminiModel // Exported for testing
+  createGeminiModel
 }
