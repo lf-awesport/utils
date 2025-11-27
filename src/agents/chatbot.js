@@ -1,7 +1,7 @@
 const { Experimental_Agent: Agent, tool, stepCountIs } = require("ai")
 const z = require("zod")
 const { createGeminiModel } = require("../gemini")
-const { searchAndRerank } = require("../queryRAG")
+const { searchAndRerank, createContext } = require("../queryRAG")
 const { agentDecisionSystemPrompt } = require("../prompts.js")
 
 /**
@@ -20,10 +20,9 @@ const chatbot = new Agent({
         query: z.string().describe("La domanda o il tema da cercare")
       }),
       execute: async ({ query }) => {
-        const results = await searchAndRerank(query)
-        return {
-          context: results
-        }
+        const documents = await searchAndRerank(query)
+        const chatbotContext = createContext(query, documents)
+        return { answer: chatbotContext }
       }
     })
   },

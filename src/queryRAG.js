@@ -1,22 +1,7 @@
 const { firestore } = require("./firebase") // Firebase/Firestore client (@google-cloud/firestore)
-const { jsonSchema } = require("ai")
-const { chatbotContextPrompt } = require("./prompts")
 const { generateEmbedding } = require("./embeddings")
 const { rerankDocuments } = require("./reranker")
-
-/**
- * JSON schema per la risposta di Gemini, forzando un formato oggetto con la chiave 'answer'.
- */
-const schema = jsonSchema({
-  $schema: "http://json-schema.org/draft-04/schema#",
-  type: "object",
-  properties: {
-    answer: {
-      type: "string"
-    }
-  },
-  required: ["answer"]
-})
+const { chatbotContextPrompt } = require("./prompts.js")
 
 /**
  * Valori di configurazione predefiniti.
@@ -161,22 +146,16 @@ ${fullBodySection}
     `
 }
 
-/**
- * Processa i risultati di ricerca per rimuovere dati sensibili (come l'embedding o il testo completo per il reranking).
- * @param {Array<Object>} results - I risultati della ricerca.
- * @returns {Array<Object>} Risultati processati.
- */
-function processSearchResults(results) {
-  return results.map(({ id, data }) => {
-    const { analysis, rerank_summary, rerank_score, ...rest } = data
-    const { cleanText, ...analysisRest } = analysis || {}
-
-    return {
-      id,
-      ...rest,
-      analysis: analysisRest
-    }
+const createContext = (query, documents) => {
+  const context = documents
+    .map(formatDocumentContext)
+    .join("\n-----------------------------\n")
+  const currentDate = new Date().toLocaleDateString("it-IT", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
   })
+  return chatbotContextPrompt(query, context, currentDate)
 }
 
 /**
@@ -267,14 +246,15 @@ async function searchSimilarDocuments({
  * @throws {RAGError} In caso di fallimento della query.
  */
 
-async function searchAndRerank(query) {
+async function searchAndRerank(query, filters = []) {
   validateQuery(query)
 
   const candidateResults = await searchSimilarDocuments({
     query,
     collectionName: "sentiment",
     distanceMeasure: DEFAULT_CONFIG.distanceMeasure,
-    limit: DEFAULT_CONFIG.limit
+    limit: DEFAULT_CONFIG.limit,
+    filters
   })
 
   const rerankRecords = candidateResults
@@ -300,17 +280,9 @@ async function searchAndRerank(query) {
     .filter((doc) => doc.data.rerank_score > 0.149)
     .slice(0, 25)
 
-  const context = finalRankedDocs
-    .map(formatDocumentContext)
-    .join("\n-----------------------------\n")
-  const currentDate = new Date().toLocaleDateString("it-IT", {
-    year: "numeric",
-    month: "long",
-    day: "numeric"
-  })
-  const chatbotContext = chatbotContextPrompt(query, context, currentDate)
+  console.log("Final ranked docs:", finalRankedDocs)
 
-  return chatbotContext
+  return finalRankedDocs
 }
 
 /**
@@ -348,5 +320,6 @@ module.exports = {
   searchSimilarDocuments,
   searchAndRerank,
   RAGError,
-  getDateRangeFilters
+  getDateRangeFilters,
+  createContext
 }

@@ -4,10 +4,7 @@ require("dotenv").config({ path: require("find-config")(".env") })
 
 // Import dependencies
 const { processArticles } = require("./src/sentiment.js")
-const {
-  searchSimilarDocuments,
-  getDateRangeFilters
-} = require("./src/queryRAG.js")
+const { searchAndRerank } = require("./src/queryRAG.js")
 const chatbot = require("./src/agents/chatbot.js")
 const { generateLearningModule } = require("./src/lesson.js")
 const { runAllScrapers } = require("./src/scraper.js")
@@ -15,12 +12,7 @@ const { runAllScrapers } = require("./src/scraper.js")
 // Configuration
 const config = {
   port: process.env.PORT || 4000,
-  maxQueryLength: 500,
-  search: {
-    defaultLimit: 25,
-    distanceMeasure: "COSINE",
-    collectionName: "sentiment"
-  }
+  maxQueryLength: 500
 }
 
 // Input validation middleware
@@ -109,13 +101,7 @@ app.post("/search", validateQuery, async (req, res) => {
     if (fromDate) filters.push({ field: "date", op: ">=", value: fromDate })
     if (toDate) filters.push({ field: "date", op: "<=", value: toDate })
 
-    const results = await searchSimilarDocuments({
-      collectionName: config.search.collectionName,
-      query,
-      distanceMeasure: config.search.distanceMeasure,
-      limit: config.search.defaultLimit,
-      filters
-    })
+    const results = await searchAndRerank(query, filters)
 
     const sources = results.map(({ id, data }) => {
       const { analysis, ...rest } = data
