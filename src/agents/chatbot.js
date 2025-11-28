@@ -1,32 +1,44 @@
 const { Experimental_Agent: Agent, tool, stepCountIs } = require("ai")
-const z = require("zod")
-const { createGeminiModel } = require("../gemini")
+const {
+  searchMemoriesTool,
+  addMemoryTool
+} = require("@supermemory/tools/ai-sdk")
 const { searchAndRerank, createContext } = require("../queryRAG")
-const { agentDecisionSystemPrompt } = require("../prompts.js")
+const { createGeminiModel } = require("../gemini")
+const { chatbotSystemPrompt } = require("../prompts.js")
+const z = require("zod")
 
-/**
- * Agent for deciding between RAG and LLM response
- * Uses your custom Gemini logic for LLM responses
- */
-
-const chatbot = new Agent({
-  model: createGeminiModel(),
-  system: agentDecisionSystemPrompt,
-  tools: {
-    searchContext: tool({
-      description:
-        "Cerca informazioni aggiuntive e fornisce contesto rilevante usando search e rerank. Usa questo tool solo se la domanda richiede dati, fonti, o analisi contestuale. NON spiegare che userai uno strumento: usalo e basta.",
-      inputSchema: z.object({
-        query: z.string().describe("La domanda o il tema da cercare")
-      }),
-      execute: async ({ query }) => {
-        const documents = await searchAndRerank(query)
-        const chatbotContext = createContext(query, documents)
-        return { answer: chatbotContext }
-      }
-    })
-  },
-  stopWhen: stepCountIs(2)
+// Define the RAG tool using the ai 'tool' helper
+const externalRAGTool = tool({
+  description:
+    "Cerca e riassumi documenti esterni rilevanti per la domanda dell'utente.",
+  inputSchema: z.object({
+    query: z
+      .string()
+      .describe("La domanda o il tema da cercare nei documenti esterni")
+  }),
+  execute: async ({ query }) => {
+    const docs = await searchAndRerank(query)
+    const context = createContext(docs)
+    return { context, docs }
+  }
 })
 
-module.exports = chatbot
+async function chatbot({ userId }) {
+  return new Agent({
+    model: createGeminiModel(),
+    system: chatbotSystemPrompt,
+    tools: {
+      searchMemories: searchMemoriesTool(process.env.SUPERMEMORY_API_KEY, {
+        containerTags: [userId || "default"]
+      }),
+      addMemory: addMemoryTool(process.env.SUPERMEMORY_API_KEY, {
+        containerTags: [userId || "default"]
+      }),
+      externalRAGTool
+    },
+    stopWhen: stepCountIs(3) // consenti fino a 3 step per favorire la generazione di testo dopo la tool call
+  })
+}
+
+module.exports = { chatbot }

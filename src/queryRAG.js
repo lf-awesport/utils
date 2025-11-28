@@ -146,16 +146,16 @@ ${fullBodySection}
     `
 }
 
-const createContext = (query, documents) => {
-  const context = documents
-    .map(formatDocumentContext)
-    .join("\n-----------------------------\n")
+const createContext = (documents) => {
   const currentDate = new Date().toLocaleDateString("it-IT", {
     year: "numeric",
     month: "long",
     day: "numeric"
   })
-  return chatbotContextPrompt(query, context, currentDate)
+  return documents
+    .map(formatDocumentContext)
+    .join("\n-----------------------------\n")
+    .concat(`DATA ODIERNA: ${currentDate}`)
 }
 
 /**
@@ -279,8 +279,6 @@ async function searchAndRerank(query, filters = []) {
     .filter((doc) => doc !== null)
     .filter((doc) => doc.data.rerank_score > 0.149)
     .slice(0, 25)
-
-  console.log("Final ranked docs:", finalRankedDocs)
 
   return finalRankedDocs
 }

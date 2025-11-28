@@ -1,5 +1,5 @@
 const { createVertex } = require("@ai-sdk/google-vertex")
-const { generateObject, streamObject } = require("ai")
+const { generateObject } = require("ai")
 require("dotenv").config({ path: require("find-config")(".env") })
 
 /**
@@ -63,7 +63,7 @@ function validateInput(content, prompt, maxTokens, schema) {
  * @returns {Object} Initialized Gemini model
  * @throws {GeminiError} If model initialization fails
  */
-function createGeminiModel() {
+function createGeminiModel(headers = {}) {
   if (!process.env.PROJECT_ID || !process.env.LOCATION || !process.env.MODEL) {
     throw new GeminiError(
       "Missing required environment variables: PROJECT_ID, LOCATION, or MODEL"
@@ -79,7 +79,8 @@ function createGeminiModel() {
           client_email: process.env.CLIENT_EMAIL,
           private_key: process.env.PRIVATE_KEY
         }
-      }
+      },
+      headers
     })
 
     return vertex_ai(process.env.MODEL, {
@@ -115,7 +116,6 @@ try {
  */
 async function gemini(content, prompt, maxTokens, schema) {
   validateInput(content, prompt, maxTokens, schema)
-  // Non-streaming mode
   try {
     const { object } = await generateObject({
       model: generativeModel,

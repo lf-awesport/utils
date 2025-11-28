@@ -5,8 +5,7 @@ require("dotenv").config({ path: require("find-config")(".env") })
 // Import dependencies
 const { processArticles } = require("./src/sentiment.js")
 const { searchAndRerank } = require("./src/queryRAG.js")
-const chatbot = require("./src/agents/chatbot.js")
-const { generateLearningModule } = require("./src/lesson.js")
+const { chatbot } = require("./src/agents/chatbot.js")
 const { runAllScrapers } = require("./src/scraper.js")
 
 // Configuration
@@ -34,18 +33,6 @@ const validateQuery = (req, res, next) => {
   next()
 }
 
-const validateModuleRequest = (req, res, next) => {
-  const { topic, materia, lessonId } = req.body
-
-  if (!topic || !materia || !lessonId) {
-    return res.status(400).json({
-      error: "Missing required fields: 'topic', 'materia', 'lessonId'"
-    })
-  }
-
-  next()
-}
-
 // Error handling middleware
 const errorHandler = (err, req, res, next) => {
   console.error("❌ Server error:", err)
@@ -62,19 +49,21 @@ app.use(express.json())
 // Routes
 app.post("/askAgent", validateQuery, async (req, res) => {
   try {
+    const userId = req.body.userId
+    const query = req.body.q
     res.setHeader("Content-Type", "text/event-stream")
     res.setHeader("Cache-Control", "no-cache")
     res.setHeader("Connection", "keep-alive")
     res.setHeader("Access-Control-Allow-Origin", "*")
-    const streamResult = chatbot.stream({ prompt: req.body.q })
-    for await (const chunk of streamResult.fullStream) {
-      if (chunk.sources) {
-        res.write(`data: ${JSON.stringify({ sources: chunk.sources })}\n\n`)
-      } else {
-        let text =
-          chunk.text || chunk.answer || (typeof chunk === "string" ? chunk : "")
-        res.write(`data: ${JSON.stringify({ text })}\n\n`)
-      }
+
+    const eddy = await chatbot({
+      userId
+    })
+
+    const result = await eddy.stream({ prompt: query })
+
+    for await (const text of result.textStream) {
+      res.write(`data: ${JSON.stringify({ text })}\n\n`)
     }
     res.end()
   } catch (error) {
@@ -111,25 +100,6 @@ app.post("/search", validateQuery, async (req, res) => {
     res.json({ sources })
   } catch (error) {
     console.error("❌ Error in /search:", error)
-    res.status(500).json({ error: error.message })
-  }
-})
-
-app.post("/generateModule", validateModuleRequest, async (req, res) => {
-  try {
-    const { topic, materia, lessonId } = req.body
-    const result = await generateLearningModule({ topic, materia, lessonId })
-
-    if (!result) {
-      return res.status(500).json({ error: "Failed to generate module" })
-    }
-
-    res.status(200).json({
-      message: `✅ Module '${lessonId}' created under '${materia}'`,
-      cards: result
-    })
-  } catch (error) {
-    console.error("❌ Error in /generateModule:", error)
     res.status(500).json({ error: error.message })
   }
 })
