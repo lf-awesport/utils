@@ -330,7 +330,7 @@ class DirettaScraper extends BaseScraper {
         title: await page.$eval("h1", (el) => el.innerText),
         date: (
           await page.$eval(
-            ".wcl-news-caption-01_w0qls + meta",
+            ".wcl-news-caption-01_M-eZK + meta",
             (el) => el.content
           )
         ).split("T")[0],
