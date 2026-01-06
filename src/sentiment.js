@@ -3,11 +3,17 @@ const { firestore } = require("./firebase.js")
 const { jsonSchema } = require("ai")
 const axios = require("axios")
 const rateLimit = require("axios-rate-limit")
-const { sentimentAnalysisSystemPrompt } = require("./prompts.js")
+const {
+  sentimentAnalysisSystemPrompt,
+  dailySystemPrompt
+} = require("./prompts.js")
 const { gemini } = require("./gemini.js")
 require("dotenv").config({ path: require("find-config")(".env") })
 const { generateEmbedding } = require("./embeddings.js")
-const { summarizeSingleArticle } = require("./utils/summarizeAndRerank.js")
+const {
+  summarizeSingleArticle,
+  generateDailyNarrativeReport
+} = require("./utils/summarizeAndRerank.js")
 const { generateCrosswordFromArticles } = require("./utils/crossword.js")
 
 /**
@@ -172,16 +178,18 @@ function prepareDocument(postId, postData, analysis, embedding) {
  * @returns {Promise<Object>} The processed document data
  * @throws {SentimentError} If processing fails
  */
-async function processArticle(post) {
+async function processArticle(post, mode = "single") {
   const postId = post.id
   const postData = post.data()
   const context = postData.body
+  const prompt =
+    mode === "daily" ? dailySystemPrompt : sentimentAnalysisSystemPrompt
 
   try {
     // 1. Sentiment Analysis
     const analysis = await gemini(
       context,
-      sentimentAnalysisSystemPrompt,
+      prompt,
       DEFAULT_CONFIG.maxTokens,
       SENTIMENT_SCHEMA
     )
@@ -200,7 +208,10 @@ async function processArticle(post) {
       ...postData,
       analysis
     }
-    const rerank_summary = await summarizeSingleArticle(docData)
+    const rerank_summary =
+      mode === "single"
+        ? await summarizeSingleArticle(docData)
+        : await generateDailyNarrativeReport([docData])
 
     // 4. Prepare document
     const doc = prepareDocument(postId, postData, analysis, embedding)
@@ -308,5 +319,74 @@ module.exports = {
   processArticles,
   SentimentError,
   DEFAULT_CONFIG, // Exported for testing
-  SENTIMENT_SCHEMA // Exported for testing
+  SENTIMENT_SCHEMA, // Exported for testing
+  processDailyArticles
+}
+/**
+ * Concatena tutti i post di una data in un unico articolo e processa con sentiment analysis
+ * @param {string|Date} date - Data in formato 'YYYY-MM-DD' o oggetto Date
+ * @returns {Promise<Object>} Analisi del "mega-articolo" giornaliero
+ */
+async function processDailyArticles(date) {
+  // Query Firestore per tutti i post di quella data
+  const postsSnap = await firestore
+    .collection("sentiment")
+    .where("date", "==", date)
+    .get()
+
+  if (postsSnap.empty) {
+    throw new SentimentError(`Nessun post trovato per la data ${date}`)
+  }
+
+  // Concatena i dati dei post in un unico "mega-articolo"
+  let megaBody = ""
+  let titles = []
+  let authors = new Set()
+  let tags = new Set()
+  let excerpts = []
+  let urls = []
+  let allPosts = []
+  postsSnap.forEach((doc) => {
+    const data = doc.data()
+    allPosts.push(data)
+    if (data.body) megaBody += `\n---\n${data.rerank_summary}`
+    if (data.title) titles.push(data.title)
+    if (data.author) authors.add(data.author)
+    if (Array.isArray(data.tags)) data.tags.forEach((t) => tags.add(t))
+    if (data.excerpt) excerpts.push(data.excerpt)
+    if (data.url) urls.push(data.url)
+  })
+
+  // Crea un oggetto "post" fittizio per processArticle
+  const fakePost = {
+    id: date,
+    data: () => ({
+      title: `Report del ${date}`,
+      author: Array.from(authors).join(", "),
+      date: date,
+      tags: Array.from(tags),
+      excerpt: excerpts.join(" | "),
+      url: urls.join(" | "),
+      body: megaBody,
+      allPosts
+    })
+  }
+
+  // Usa la stessa pipeline di processArticle
+  const result = await processArticle(fakePost, "daily")
+
+  // Salva il risultato nella collezione "daily"
+  await firestore
+    .collection("daily")
+    .doc(date)
+    .set(
+      {
+        ...result,
+        imgLink: null,
+        createdAt: new Date()
+      },
+      { merge: true }
+    )
+
+  return result
 }

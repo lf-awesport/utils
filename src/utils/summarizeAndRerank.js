@@ -54,111 +54,83 @@ async function summarizeSingleArticle(data) {
   }
 }
 
-// --- FUNZIONE PRINCIPALE: BATCH PROCESSING CON PAGINAZIONE ---
+/**
+ * 💡 PROMPT GIORNALISTICO:
+ * Trasforma una rassegna di articoli in un "Executive Daily Briefing"
+ * scritto con stile editoriale di alto livello (es. Il Sole 24 Ore).
+ */
+const DAILY_REPORT_PROMPT = `
+Sei il Caporedattore di una prestigiosa testata di Sport Business. 
+Il tuo compito è scrivere il "Daily Executive Briefing": un articolo di analisi e cronaca che riassuma i fatti salienti della giornata in modo organico.
+
+LINEE GUIDA EDITORIALI:
+1. STILE: Scrittura fluida, autorevole e coinvolgente. Evita elenchi puntati; usa paragrafi narrativi.
+2. CONNESSIONI: Non limitarti a riassumere i singoli pezzi, ma crea un filo logico tra i fatti (es. collegando trend economici, diritti TV e risultati sul campo).
+3. VALORE MANAGERIARE: Sottolinea le implicazioni strategiche, nomi di protagonisti, cifre e riferimenti precisi.
+4. APERTURA E CHIUSURA: Inizia con un'analisi del "mood" della giornata e chiudi con una riflessione sui trend emergenti.
+
+FORMATO: Restituisci SOLO E SOLTANTO il testo dell'articolo narrativo.
+ERRORE DA EVITARE: Nessun titolo, nessuna etichetta (es: "Riassunto:"), nessuna formattazione markdown come grassetti o liste. Solo testo piano (plain text) di eccellente qualità.`
 
 /**
- * Scansiona la collezione 'sentiment' in blocchi paginati, riassume i documenti mancanti
- * del campo 'rerank_summary' e aggiorna Firestore in batch, rispettando i limiti QPM.
+ * Genera un report narrativo unico basato su tutti gli articoli di una giornata.
+ * @param {Array} articlesData - Array di oggetti documento (doc.data()) della giornata.
+ * @returns {Promise<string|null>} L'articolo di sintesi giornaliera o null.
  */
-async function summarizeAndRerankAll() {
-  console.log("--- INIZIO summarizeAndRerankAll con Paginazione ---")
-
-  let lastDoc = null // Cursore per la paginazione
-  let hasMore = true
-  let totalProcessed = 0
-  let totalSkipped = 0
-  let totalDocumentsRead = 0
-
-  while (hasMore) {
-    let query = firestore
-      .collection("sentiment")
-      // '__name__' è l'alias per l'ID del documento, necessario per la paginazione
-      .orderBy("__name__")
-      .limit(BATCH_READ_SIZE)
-
-    if (lastDoc) {
-      // Continua la lettura dal documento successivo all'ultimo letto
-      query = query.startAfter(lastDoc)
-    }
-
-    // Lettura del blocco da Firestore
-    const snapshot = await query.get()
-
-    if (snapshot.empty) {
-      hasMore = false
-      break
-    }
-
-    let dbBatch = firestore.batch()
-    let dbBatchCount = 0
-
-    console.log(
-      `\n--- BLOCCO INIZIATO: Letti ${snapshot.docs.length} documenti ---`
-    )
-
-    for (const doc of snapshot.docs) {
-      totalDocumentsRead++
-      lastDoc = doc // Aggiorna il cursore per il prossimo blocco
-
-      const data = doc.data()
-
-      // FILTRO ROBUSTO IN MEMORIA: skippa se il campo esiste ED ha contenuto valido.
-      if (
-        data.rerank_summary &&
-        typeof data.rerank_summary === "string" &&
-        data.rerank_summary.length > 10
-      ) {
-        totalSkipped++
-        continue
-      }
-
-      // RATE LIMIT: Aspetta prima di chiamare Gemini
-      if (totalProcessed > 0) {
-        await sleep(GEMINI_DELAY_MS)
-      }
-
-      console.log(
-        `[${totalDocumentsRead}] PROCESS: ${doc.id} - Invio a Gemini...`
-      )
-      try {
-        const summary = await summarizeSingleArticle(data)
-        if (summary) {
-          dbBatch.update(doc.ref, { rerank_summary: summary })
-          dbBatchCount++
-          totalProcessed++
-
-          if (dbBatchCount === BATCH_WRITE_SIZE) {
-            await dbBatch.commit()
-            console.log(
-              `BATCH COMMIT: ${BATCH_WRITE_SIZE} aggiornamenti eseguiti.`
-            )
-            dbBatch = firestore.batch()
-            dbBatchCount = 0
-          }
-        }
-      } catch (err) {
-        console.error(
-          `[${totalDocumentsRead}] ERROR: ${doc.id} - ${err.message}`
-        )
-      }
-    }
-
-    // Commit degli aggiornamenti rimanenti nel blocco corrente
-    if (dbBatchCount > 0) {
-      await dbBatch.commit()
-      console.log(`BLOCCO COMMIT: ${dbBatchCount} aggiornamenti eseguiti.`)
-    }
-
-    // Se il blocco letto è inferiore alla dimensione massima, abbiamo raggiunto la fine della collezione
-    if (snapshot.docs.length < BATCH_READ_SIZE) {
-      hasMore = false
-    }
+async function generateDailyNarrativeReport(articlesData) {
+  if (
+    !articlesData ||
+    !Array.isArray(articlesData) ||
+    articlesData.length === 0
+  ) {
+    return null
   }
 
-  console.log(`--- FINE summarizeAndRerankAll ---`)
-  console.log(`Totale documenti letti: ${totalDocumentsRead}`)
-  console.log(`Totale riassunti e aggiornati: ${totalProcessed}`)
-  console.log(`Totale saltati (già riassunti): ${totalSkipped}`)
+  // Costruiamo il contesto aggregato per Gemini
+  const combinedContext = articlesData
+    .map((data, index) => {
+      const analysis = data.analysis || {}
+      return `
+    --- NOTIZIA ${index + 1} ---
+    TITOLO: ${data.title || "N/A"}
+    DATA ORIGINALE: ${data.date || "N/A"}
+    FOCUS: ${analysis.tesi_principale || "N/A"}
+    TAKEAWAYS: ${Array.isArray(analysis.takeaways) ? analysis.takeaways.join(" | ") : "N/A"}
+    TESTO INTEGRALE: ${data.body ? data.body.substring(0, 1200) : "N/A"}
+    `
+    })
+    .join("\n")
+
+  const inputContext = `
+  DATA DEL REPORT: ${articlesData[0].date || "Oggi"}
+  ARTICOLI TOTALI ANALIZZATI: ${articlesData.length}
+
+  DATASET GIORNALIERO:
+  ${combinedContext}
+  `
+
+  try {
+    // Chiamata a Gemini: aumentiamo il max_tokens per permettere un articolo completo
+    const report = await gemini(
+      inputContext,
+      DAILY_REPORT_PROMPT,
+      1500,
+      z.string()
+    )
+
+    // Pulizia finale: rimuoviamo eventuali residui di formattazione markdown
+    const cleanReport = report
+      .replace(/[*#_]/g, "") // Rimuove grassetti e titoli markdown
+      .trim()
+
+    return cleanReport
+  } catch (err) {
+    console.error(
+      "Errore durante la generazione del Daily Report:",
+      err.message
+    )
+    return null
+  }
 }
 
-module.exports = { summarizeSingleArticle }
+module.exports = { summarizeSingleArticle, generateDailyNarrativeReport }
