@@ -3,7 +3,7 @@ const cors = require("cors")
 require("dotenv").config({ path: require("find-config")(".env") })
 
 // Import dependencies
-const { processArticles } = require("./src/sentiment.js")
+const { processArticles, processDailyArticles } = require("./src/sentiment.js")
 const { searchAndRerank } = require("./src/queryRAG.js")
 const { chatbot } = require("./src/agents/chatbot.js")
 const { runAllScrapers } = require("./src/scraper.js")
@@ -112,7 +112,34 @@ app.get("/update", async (req, res) => {
   try {
     await runAllScrapers()
     await processArticles()
-    res.status(200).send("✅ Update complete!")
+    // Calcola le date: dall'ultimo mese fino a due giorni fa
+    const today = new Date()
+    const results = []
+    const firestore = require("./src/firebase.js").firestore
+
+    for (let i = 30; i >= 2; i--) {
+      const d = new Date(today)
+      d.setDate(today.getDate() - i)
+      const dateString = d.toISOString().slice(0, 10)
+
+      // Salta se già presente in daily
+      const dailyDoc = await firestore
+        .collection("daily")
+        .doc(`daily-${dateString}`)
+        .get()
+      if (dailyDoc.exists) {
+        results.push(`${dateString}: SKIPPED (already exists)`)
+        continue
+      }
+
+      try {
+        await processDailyArticles(dateString)
+        results.push(`${dateString}: OK`)
+      } catch (err) {
+        results.push(`${dateString}: ERROR - ${err.message}`)
+      }
+    }
+    res.status(200).send(`✅ Update complete!\n` + results.join("\n"))
   } catch (error) {
     console.error("❌ Error during update:", error)
     res.status(500).json({ error: error.message })

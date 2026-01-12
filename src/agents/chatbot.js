@@ -1,33 +1,20 @@
-const { Experimental_Agent: Agent, tool, stepCountIs } = require("ai")
+const { Experimental_Agent: Agent, stepCountIs } = require("ai")
 const {
   searchMemoriesTool,
   addMemoryTool
 } = require("@supermemory/tools/ai-sdk")
-const { searchAndRerank, createContext } = require("../queryRAG")
+const { perplexitySearchTool } = require("../tools/perplexityTool")
+const { externalRAGTool } = require("../tools/externalRAGTool")
 const { createGeminiModel } = require("../gemini")
 const { chatbotSystemPrompt } = require("../prompts.js")
 const z = require("zod")
 
-// Define the RAG tool using the ai 'tool' helper
-const externalRAGTool = tool({
-  description:
-    "Cerca e riassumi documenti esterni rilevanti per la domanda dell'utente.",
-  inputSchema: z.object({
-    query: z
-      .string()
-      .describe("La domanda o il tema da cercare nei documenti esterni")
-  }),
-  execute: async ({ query }) => {
-    const docs = await searchAndRerank(query)
-    const context = createContext(docs)
-    return { context, docs }
-  }
-})
-
 async function chatbot({ userId }) {
+  // Prompt aggiornato: l'agente deve sempre usare prima il RAG (externalRAGTool) e poi Perplexity (perplexitySearch), aggiungendo solo nuovi articoli da Perplexity
+  const systemPrompt = `${chatbotSystemPrompt}\n\nISTRUZIONI: Per ogni domanda, esegui SEMPRE prima una ricerca nel database interno (usando externalRAGTool), poi una ricerca web in tempo reale (usando perplexitySearch). Se Perplexity trova articoli nuovi (per URL), aggiungili sia al contesto che al database; altrimenti usa solo i risultati del database.`
   return new Agent({
     model: createGeminiModel(),
-    system: chatbotSystemPrompt,
+    system: systemPrompt,
     tools: {
       searchMemories: searchMemoriesTool(process.env.SUPERMEMORY_API_KEY, {
         containerTags: [userId || "default"]
@@ -35,9 +22,10 @@ async function chatbot({ userId }) {
       addMemory: addMemoryTool(process.env.SUPERMEMORY_API_KEY, {
         containerTags: [userId || "default"]
       }),
-      externalRAGTool
+      externalRAGTool,
+      perplexitySearchTool
     },
-    stopWhen: stepCountIs(3) // consenti fino a 3 step per favorire la generazione di testo dopo la tool call
+    stopWhen: stepCountIs(4)
   })
 }
 
