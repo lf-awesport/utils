@@ -51,21 +51,11 @@ app.post("/askAgent", validateQuery, async (req, res) => {
   try {
     const userId = req.body.userId
     const query = req.body.q
-    res.setHeader("Content-Type", "text/event-stream")
-    res.setHeader("Cache-Control", "no-cache")
-    res.setHeader("Connection", "keep-alive")
+    res.setHeader("Content-Type", "application/json")
     res.setHeader("Access-Control-Allow-Origin", "*")
-
-    const eddy = await chatbot({
-      userId
-    })
-
-    const result = await eddy.stream({ prompt: query })
-
-    for await (const text of result.textStream) {
-      res.write(`data: ${JSON.stringify({ text })}\n\n`)
-    }
-    res.end()
+    const pipeline = await chatbot({ userId })
+    const result = await pipeline({ query })
+    res.json({ text: result })
   } catch (error) {
     console.error("❌ Error in /askAgent:", error)
     res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`)

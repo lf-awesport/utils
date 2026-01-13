@@ -1,7 +1,6 @@
 const { firestore } = require("./firebase") // Firebase/Firestore client (@google-cloud/firestore)
 const { generateEmbedding } = require("./embeddings")
 const { rerankDocuments } = require("./reranker")
-const { chatbotContextPrompt } = require("./prompts.js")
 
 /**
  * Valori di configurazione predefiniti.
@@ -219,6 +218,7 @@ async function searchSimilarDocuments({
 
       return {
         id: doc.id,
+        //todo why do this
         data: {
           ...doc.data(),
           vector_distance: distance,
@@ -278,7 +278,7 @@ async function searchAndRerank(query, filters = []) {
     })
     .filter((doc) => doc !== null)
     .filter((doc) => doc.data.rerank_score > 0.149)
-    .slice(0, 25)
+    .slice(0, 10)
 
   return finalRankedDocs
 }

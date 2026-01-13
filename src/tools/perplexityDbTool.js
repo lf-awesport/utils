@@ -7,61 +7,57 @@ function generateId(seed) {
   return rng(seed)().toString()
 }
 
+function normalizeArticle(article) {
+  const {
+    id,
+    title,
+    url,
+    snippet,
+    date,
+    body,
+    excerpt,
+    imgLink,
+    author,
+    processed,
+    createdAt
+  } = article
+  const cleanTitle = title?.trim() || ""
+  const cleanUrl = url?.trim() || ""
+  const docId = id || generateId(cleanTitle || cleanUrl)
+  return {
+    id: docId,
+    title: cleanTitle,
+    url: cleanUrl,
+    body: body || snippet || "",
+    excerpt: excerpt || snippet?.split("\n")[0] || snippet || "",
+    date: date || null,
+    imgLink: imgLink || null,
+    author: author || "Perplexity",
+    processed: processed || false,
+    createdAt: createdAt || new Date()
+  }
+}
+
 async function findExistingPost(url, title) {
-  const cleanUrl = url?.trim()
-  const cleanTitle = title?.trim()
-  const id = generateId(title || url)
-  const postRef = firestore.collection("posts").doc(id)
+  // Gli articoli sono già normalizzati e con id
+  const postRef = firestore.collection("posts").doc(url)
   const postSnap = await postRef.get()
   if (postSnap.exists) {
-    const existing = postSnap.data()
-    const sameUrl = existing.url?.trim() === cleanUrl
-    const sameTitle = existing.title?.trim() === cleanTitle
-    if (sameUrl || sameTitle) {
-      return existing
-    }
-    return existing
-  }
-  if (cleanUrl) {
-    const urlSnap = await firestore
-      .collection("posts")
-      .where("url", "==", cleanUrl)
-      .limit(1)
-      .get()
-    if (!urlSnap.empty) return urlSnap.docs[0].data()
-  }
-  if (cleanTitle) {
-    const titleSnap = await firestore
-      .collection("posts")
-      .where("title", "==", cleanTitle)
-      .limit(1)
-      .get()
-    if (!titleSnap.empty) return titleSnap.docs[0].data()
+    return postSnap.data()
   }
   return null
 }
 
 async function savePerplexityArticle(article) {
-  const { title, url, snippet, date } = article
-  const cleanTitle = title?.trim()
-  const cleanUrl = url?.trim()
-  const id = generateId(cleanTitle || cleanUrl)
-  const existing = await findExistingPost(cleanUrl, cleanTitle)
-  if (existing) return existing
-  const postData = {
-    id,
-    title: cleanTitle,
-    url: cleanUrl,
-    body: snippet,
-    excerpt: snippet?.split("\n")[0] || snippet,
-    date,
-    imgLink: null,
-    author: "Perplexity",
-    processed: false,
-    createdAt: new Date()
+  const existing = await findExistingPost(article.id)
+  if (existing) {
+    return existing
   }
-  await firestore.collection("posts").doc(id).set(postData, { merge: true })
-  return postData
+  await firestore
+    .collection("posts")
+    .doc(article.id)
+    .set(article, { merge: true })
+  return article
 }
 
 const perplexityDbTool = tool({
@@ -87,4 +83,4 @@ const perplexityDbTool = tool({
   }
 })
 
-module.exports = { perplexityDbTool }
+module.exports = { perplexityDbTool, normalizeArticle }

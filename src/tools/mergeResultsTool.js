@@ -29,14 +29,8 @@ const mergeResultsTool = tool({
       if (a.date && b.date) return b.date.localeCompare(a.date)
       return 0
     })
-    // Compose context string
-    const context = merged
-      .map(
-        (a) =>
-          `TITOLO: ${a.title}\nAUTORE: ${a.author}\nDATA: ${a.date}\nURL: ${a.url}\nESTRATTO: ${a.excerpt}\nBODY: ${a.body?.slice(0, 1000)}`
-      )
-      .join("\n-----------------------------\n")
-    return { context, merged }
+    // La generazione della context string viene ora delegata a valle (es. createContext)
+    return { merged }
   }
 })
 

@@ -36,6 +36,7 @@ const perplexitySearchTool = tool({
       (key) => sdkParams[key] === undefined && delete sdkParams[key]
     )
     const search = await client.search.create(sdkParams)
+    const numResults = Array.isArray(search.results) ? search.results.length : 0
     return search
   }
 })
