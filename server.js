@@ -55,7 +55,12 @@ app.post("/askAgent", validateQuery, async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*")
     const pipeline = await chatbot({ userId })
     const result = await pipeline({ query })
-    res.json({ text: result })
+    // Se result è già oggetto con text e sources, restituiscilo così com'è
+    if (result && typeof result === "object" && "text" in result && "sources" in result) {
+      res.json(result)
+    } else {
+      res.json({ text: result })
+    }
   } catch (error) {
     console.error("❌ Error in /askAgent:", error)
     res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`)

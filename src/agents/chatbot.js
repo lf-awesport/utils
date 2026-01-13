@@ -11,7 +11,9 @@ const { createContext } = require("../queryRAG")
 const z = require("zod")
 
 // Schema di output per Gemini (risposta testuale)
-const outputSchema = z.string()
+const outputSchema = z.object({
+  content: z.string()
+})
 
 async function chatbot({ userId }) {
   // Orchestrazione manuale della pipeline
@@ -33,6 +35,7 @@ async function chatbot({ userId }) {
       ragResults: ragDocs,
       perplexityResults: perplexityDocs
     })
+
     // Usa createContext per generare il contesto finale (tutti i doc ora hanno .data)
     const context = createContext(mergeResult.merged || [])
 
@@ -41,21 +44,12 @@ async function chatbot({ userId }) {
     const finalContext = chatbotContextPrompt(query, context, currentDate)
     // Risposta completa con funzione gemini
     // prompt = system, context = user content
-    let answer = ""
-    try {
-      const response = await gemini(
-        finalContext,
-        chatbotSystemPrompt,
-        8000,
-        outputSchema
-      )
-      answer =
-        typeof response === "string"
-          ? response
-          : response?.answer || JSON.stringify(response)
-    } catch (err) {
-      answer = `[ERRORE] ${err.message || err}`
-    }
+    const answer = await gemini(
+      finalContext,
+      chatbotSystemPrompt,
+      8000,
+      outputSchema
+    )
     // Dopo la risposta, salva i nuovi articoli
     const ragUrls = new Set(ragDocs.map((d) => d.url))
     // Estrai gli articoli normalizzati da {data: ...}
@@ -68,7 +62,19 @@ async function chatbot({ userId }) {
     if (newArticles.length > 0) {
       await perplexityDbTool.execute({ articles: newArticles })
     }
-    return answer
+    // Includi anche le fonti (mergeResult.merged) in formato flat per il front-end
+    const sources = (mergeResult.merged || []).map((src, i) => {
+      const d = src.data || src
+      return {
+        url: d.url || "",
+        title: `[${i + 1}]`,
+        date: d.date || ""
+      }
+    })
+    return {
+      text: answer.content,
+      sources
+    }
   }
 }
 

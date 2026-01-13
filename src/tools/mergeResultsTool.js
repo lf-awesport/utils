@@ -16,12 +16,12 @@ const mergeResultsTool = tool({
     // Crea una mappa per URL, priorità ai doc enriched (RAG)
     const byUrl = new Map()
     for (const doc of ragResults) {
-      if (doc.url) byUrl.set(doc.url, doc)
+      if (doc.data.url) byUrl.set(doc.data.url, doc)
     }
     // Poi i Perplexity (solo se non già presenti)
     for (const article of perplexityResults) {
-      if (article.url && !byUrl.has(article.url)) {
-        byUrl.set(article.url, article)
+      if (article.data.url && !byUrl.has(article.data.url)) {
+        byUrl.set(article.data.url, article)
       }
     }
     // Ordina per data decrescente se disponibile

@@ -154,7 +154,6 @@ const createContext = (documents) => {
   return documents
     .map(formatDocumentContext)
     .join("\n-----------------------------\n")
-    .concat(`DATA ODIERNA: ${currentDate}`)
 }
 
 /**
