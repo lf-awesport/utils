@@ -143,7 +143,7 @@ Please extract the following fields to improve search, filtering, and generation
 
 module.exports.sentimentAnalysisSystemPrompt = sentimentAnalysisSystemPrompt
 
-const chatbotContextPrompt = (query, articleContext, currentDate) => `
+const chatbotContextPrompt = (query, articleContext, currentDate, history) => `
       ## ❓ DOMANDA UTENTE
       ${query}
 
@@ -154,6 +154,7 @@ const chatbotContextPrompt = (query, articleContext, currentDate) => `
 
       ---
 
+      ${history ? `## 📜 CRONOLOGIA CHAT\n${history}\n\n---` : ""}
 
       ## 📑 CONTESTO (Articoli Rilevanti)
       ${articleContext}

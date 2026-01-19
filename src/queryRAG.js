@@ -10,7 +10,7 @@ const DEFAULT_CONFIG = {
   maxTokens: 8192,
   vectorField: "embedding",
   distanceMeasure: "COSINE",
-  limit: 100
+  limit: 20
 }
 
 /**

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/google-vertex": "^3.0.16",
+    "@getzep/zep-cloud": "^3.16.0",
     "@google-cloud/firestore": "^7.11.0",
     "@jaredreisinger/react-crossword": "^5.2.0",
     "@perplexity-ai/perplexity_ai": "^0.18.3",
