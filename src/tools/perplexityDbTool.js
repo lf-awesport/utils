@@ -74,11 +74,7 @@ const perplexityDbTool = tool({
     )
   }),
   execute: async ({ articles }) => {
-    const results = []
-    for (const article of articles) {
-      const post = await savePerplexityArticle(article)
-      results.push(post)
-    }
+    const results = await Promise.all(articles.map(savePerplexityArticle))
     return results
   }
 })

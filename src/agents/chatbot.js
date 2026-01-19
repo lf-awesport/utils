@@ -60,7 +60,10 @@ async function chatbot({ userId }) {
       }
     }
     if (newArticles.length > 0) {
-      await perplexityDbTool.execute({ articles: newArticles })
+      // Fire-and-forget: salva in background senza bloccare la risposta
+      perplexityDbTool
+        .execute({ articles: newArticles })
+        .catch((err) => console.error("Background save error:", err))
     }
     // Includi anche le fonti (mergeResult.merged) in formato flat per il front-end
     const sources = (mergeResult.merged || []).map((src, i) => {
