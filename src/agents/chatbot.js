@@ -6,9 +6,15 @@ const {
 } = require("../tools/perplexityDbTool")
 const { mergeResultsTool } = require("../tools/mergeResultsTool")
 const { gemini } = require("../gemini")
-const { chatbotContextPrompt, chatbotSystemPrompt } = require("../prompts.js")
+const {
+  chatbotContextPrompt,
+  chatbotSystemPrompt,
+  conversationalContextPrompt,
+  conversationalSystemPrompt
+} = require("../prompts.js")
 const { createContext } = require("../queryRAG")
 const { zepClient } = require("../zep")
+const { toolRouter } = require("./router")
 const z = require("zod")
 
 // Schema di output per Gemini (risposta testuale)
@@ -41,74 +47,102 @@ async function chatbot({ userId }) {
         ? ensureZepSession(userId, threadId)
         : Promise.resolve()
 
-    // 1. RAG e Perplexity in parallelo
-
-    const [ragResult, perplexityResult] = await Promise.all([
-      externalRAGTool.execute({ query }),
-      perplexitySearchTool.execute({ query })
-    ])
-    const ragDocs = ragResult.docs || []
-    // Normalizza i risultati Perplexity e wrappa in {data: ...} per compatibilità
-    const perplexityDocs = (perplexityResult.results || [])
-      .map(normalizeArticle)
-      .map((a) => ({ data: a }))
-
-    // 2. Merge e deduplica
-    const mergeResult = await mergeResultsTool.execute({
-      ragResults: ragDocs,
-      perplexityResults: perplexityDocs
-    })
-
-    // Usa createContext per generare il contesto finale (tutti i doc ora hanno .data)
-    const context = createContext(mergeResult.merged || [])
-
-    // --- ZEP MEMORY RETRIEVAL ---
+    // --- PHASE 1: RETRIEVE MEMORY ---
     let fullHistory = ""
+    let chatLog = ""
+    let zepContextBlock = ""
 
     if (userId && threadId) {
       try {
         await zepSetupPromise
-
         // Fetch Context and Messages
         const [contextRes, messagesRes] = await Promise.all([
           zepClient.thread.getUserContext(threadId).catch((e) => null),
           zepClient.thread.get(threadId, { limit: 10 }).catch((e) => null)
         ])
 
-        // Format Recent Chat messages
-        let chatLog = ""
         if (messagesRes && messagesRes.messages) {
           chatLog = messagesRes.messages
-            .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.content}`)
+            .map(
+              (m) =>
+                `${
+                  m.role === "user" || m.role === "human" ? "User" : "AI"
+                }: ${m.content}`
+            )
             .join("\n")
         }
 
-        // Format Zep Context Block (Long-term memory facts)
-        let contextBlock = ""
         if (contextRes && contextRes.context) {
-          contextBlock = `\n\n## 🧠 LONG TERM MEMORY (User Facts):\n${contextRes.context}`
+          zepContextBlock = `\n\n## 🧠 LONG TERM MEMORY (User Facts):\n${contextRes.context}`
         }
 
-        fullHistory = chatLog + contextBlock
+        fullHistory = chatLog + zepContextBlock
       } catch (error) {
         console.error("Failed to fetch Zep data:", error.message)
       }
     }
-    // ---------------------------
+
+    // --- PHASE 2: ROUTER DECISION ---
+    const decision = await toolRouter({ query, history: chatLog })
+    console.log("🤖 Router Decision:", JSON.stringify(decision))
+
+    // --- PHASE 3: CONDITIONAL TOOL EXECUTION ---
+    let ragResult = { docs: [] }
+    let perplexityResult = { results: [] }
+    let finalSystemPrompt = conversationalSystemPrompt
+    let finalUserPrompt = ""
+    const currentDate = new Date().toISOString().slice(0, 10)
+
+    // A. RAG MODE
+    if (decision.tools.length > 0) {
+      finalSystemPrompt = chatbotSystemPrompt
+
+      const useRag = decision.tools.includes("rag")
+      const usePerp = decision.tools.includes("perplexity")
+
+      const promises = []
+      if (useRag) promises.push(externalRAGTool.execute({ query }))
+      else promises.push(Promise.resolve({ docs: [] }))
+
+      if (usePerp) promises.push(perplexitySearchTool.execute({ query }))
+      else promises.push(Promise.resolve({ results: [] }))
+
+      const results = await Promise.all(promises)
+      ragResult = results[0]
+      perplexityResult = results[1]
+
+      const ragDocs = ragResult.docs || []
+      const perplexityDocs = (perplexityResult.results || [])
+        .map(normalizeArticle)
+        .map((a) => ({ data: a }))
+
+      const mergeResult = await mergeResultsTool.execute({
+        ragResults: ragDocs,
+        perplexityResults: perplexityDocs
+      })
+
+      const context = createContext(mergeResult.merged || [])
+
+      finalUserPrompt = chatbotContextPrompt(
+        query,
+        context,
+        currentDate,
+        fullHistory
+      )
+    }
+    // B. CONVERSATIONAL MODE
+    else {
+      finalUserPrompt = conversationalContextPrompt(
+        query,
+        currentDate,
+        fullHistory
+      )
+    }
 
     // 3. Stream risposta con Gemini
-    const currentDate = new Date().toISOString().slice(0, 10)
-    const finalContext = chatbotContextPrompt(
-      query,
-      context,
-      currentDate,
-      fullHistory
-    )
-    // Risposta completa con funzione gemini
-    // prompt = system, context = user content
     const answer = await gemini(
-      finalContext,
-      chatbotSystemPrompt,
+      finalUserPrompt,
+      finalSystemPrompt,
       8192,
       outputSchema
     )
@@ -128,6 +162,11 @@ async function chatbot({ userId }) {
     // -------------------------
 
     // Dopo la risposta, salva i nuovi articoli
+    const ragDocs = ragResult.docs || []
+    const perplexityDocs = (perplexityResult.results || [])
+      .map(normalizeArticle)
+      .map((a) => ({ data: a }))
+
     const ragUrls = new Set(ragDocs.map((d) => d.url))
     // Estrai gli articoli normalizzati da {data: ...}
     const newArticles = []
@@ -143,14 +182,22 @@ async function chatbot({ userId }) {
         .catch((err) => console.error("Background save error:", err))
     }
     // Includi anche le fonti (mergeResult.merged) in formato flat per il front-end
-    const sources = (mergeResult.merged || []).map((src, i) => {
-      const d = src.data || src
-      return {
-        url: d.url || "",
-        title: `[${i + 1}]`,
-        date: d.date || ""
-      }
-    })
+    let sources = []
+    if (decision.tools.length > 0) {
+      // Need to re-merge or just use what we have available
+      // The mergeResult was defined inside the IF previously, now it's out of scope or we need to access it
+      // Let's re-run merge or just map directly from what we have since we can't easily hoist the complex merge object
+      // Actually, let's just create a quick source list
+      const allDocs = [...ragDocs, ...perplexityDocs.map((p) => p.data)]
+      sources = allDocs
+        .map((d, i) => ({
+          url: d.url || "",
+          title: `[${i + 1}]`,
+          date: d.date || ""
+        }))
+        .slice(0, 10) // Limit sources
+    }
+
     return {
       text: answer.content,
       sources
