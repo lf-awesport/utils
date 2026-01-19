@@ -7,6 +7,7 @@ const { processArticles, processDailyArticles } = require("./src/sentiment.js")
 const { searchAndRerank } = require("./src/queryRAG.js")
 const { chatbot } = require("./src/agents/chatbot.js")
 const { runAllScrapers } = require("./src/scraper.js")
+const { zepClient } = require("./src/zep.js")
 
 // Configuration
 const config = {
@@ -56,7 +57,12 @@ app.post("/askAgent", validateQuery, async (req, res) => {
     const pipeline = await chatbot({ userId })
     const result = await pipeline({ query })
     // Se result è già oggetto con text e sources, restituiscilo così com'è
-    if (result && typeof result === "object" && "text" in result && "sources" in result) {
+    if (
+      result &&
+      typeof result === "object" &&
+      "text" in result &&
+      "sources" in result
+    ) {
       res.json(result)
     } else {
       res.json({ text: result })
@@ -95,6 +101,27 @@ app.post("/search", validateQuery, async (req, res) => {
     res.json({ sources })
   } catch (error) {
     console.error("❌ Error in /search:", error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+app.post("/users", async (req, res) => {
+  try {
+    const { userId, email, name } = req.body
+
+    if (!userId || !email) {
+      return res.status(400).json({ error: "Missing required fields" })
+    }
+
+    const user = await zepClient.user.add({
+      userId,
+      email,
+      name: name || userId
+    })
+
+    res.json(user)
+  } catch (error) {
+    console.error("❌ Error registering Zep user:", error)
     res.status(500).json({ error: error.message })
   }
 })

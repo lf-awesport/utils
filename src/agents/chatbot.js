@@ -84,7 +84,6 @@ async function chatbot({ userId }) {
 
     // --- PHASE 2: ROUTER DECISION ---
     const decision = await toolRouter({ query, history: chatLog })
-    console.log("🤖 Router Decision:", JSON.stringify(decision))
 
     // --- PHASE 3: CONDITIONAL TOOL EXECUTION ---
     let ragResult = { docs: [] }
