@@ -13,31 +13,69 @@ const agentLimiter = rateLimit({
   message: { error: "Too many requests, please try again later." }
 })
 
-router.post("/", agentLimiter, validateQuery, async (req, res, next) => {
+router.post("/stream", agentLimiter, validateQuery, async (req, res) => {
+  let closed = false
+  const onClose = () => {
+    closed = true
+  }
+  req.on("close", onClose)
+
   try {
     const userId = req.body.userId
     const query = req.body.q
 
-    // These headers are usually handled by CORS middleware, but keeping for safety if consistent with previous
-    // res.setHeader("Access-Control-Allow-Origin", "*")
-    // Express res.json automaticall sets Content-Type
+    res.setHeader("Content-Type", "text/event-stream")
+    res.setHeader("Cache-Control", "no-cache")
+    res.setHeader("Connection", "keep-alive")
+    res.setHeader("X-Accel-Buffering", "no")
+    res.flushHeaders()
+
+    res.write("retry: 3000\n\n")
+
+    const ping = setInterval(() => {
+      if (closed) return
+      res.write("event: ping\ndata: {}\n\n")
+    }, 15000)
+
+    const safeWrite = (payload) => {
+      if (closed) return
+      const ok = res.write(payload)
+      if (!ok) {
+        res.once("drain", () => {})
+      }
+    }
 
     const pipeline = await chatbot({ userId })
-    // Destructure specifically to get savePromise
-    const { text, sources, savePromise } = await pipeline({ query })
+    const result = await pipeline({
+      query,
+      onToken: (token) => {
+        safeWrite(`data: ${JSON.stringify({ text: token })}\n\n`)
+      }
+    })
 
-    // 1. Send response IMMEDIATELY to user
-    res.json({ text, sources })
-
-    // 2. Wait for background tasks to finish (serverless keep-alive)
-    // We swallow errors here because response is already sent
-    if (savePromise) {
-      await savePromise.catch((e) =>
-        console.error("Background save failed:", e)
+    if (result && !closed) {
+      safeWrite(
+        `data: ${JSON.stringify({
+          text: result.text,
+          sources: result.sources || [],
+          overwrite: true
+        })}\n\n`
       )
     }
+
+    if (!closed) {
+      safeWrite("event: end\ndata: {}\n\n")
+      res.end()
+    }
+    clearInterval(ping)
   } catch (error) {
-    next(error)
+    if (!closed) {
+      res.write("event: error\n")
+      res.write(`data: ${JSON.stringify({ message: error.message })}\n\n`)
+      res.end()
+    }
+  } finally {
+    req.off("close", onClose)
   }
 })
 

@@ -1,5 +1,5 @@
 const { createVertex } = require("@ai-sdk/google-vertex")
-const { generateObject } = require("ai")
+const { generateObject, streamText } = require("ai")
 const { config, requireEnv } = require("../config")
 
 /**
@@ -55,6 +55,18 @@ function validateInput(content, prompt, maxTokens, schema) {
   }
   if (!schema || typeof schema !== "object") {
     throw new TypeError("schema must be a valid JSON schema object")
+  }
+}
+
+function validateStreamInput(content, prompt, maxTokens) {
+  if (typeof content !== "string" || content.trim().length === 0) {
+    throw new TypeError("Content must be a non-empty string")
+  }
+  if (typeof prompt !== "string" || prompt.trim().length === 0) {
+    throw new TypeError("Prompt must be a non-empty string")
+  }
+  if (!Number.isInteger(maxTokens) || maxTokens <= 0) {
+    throw new TypeError("maxTokens must be a positive integer")
   }
 }
 
@@ -132,8 +144,40 @@ async function gemini(content, prompt, maxTokens, schema) {
   }
 }
 
+/**
+ * Streams text output using the Gemini model
+ * @param {string} content - The input content to process
+ * @param {string} prompt - The system prompt to guide the generation
+ * @param {number} maxTokens - Maximum number of tokens to generate
+ * @returns {Promise<AsyncIterable<string>>} - Stream of generated text chunks
+ * @throws {GeminiError} If generation fails
+ * @throws {TypeError} If parameters are invalid
+ */
+async function geminiStream(content, prompt, maxTokens) {
+  validateStreamInput(content, prompt, maxTokens)
+  try {
+    const generativeModel = createGeminiModel()
+    const { textStream } = await streamText({
+      model: generativeModel,
+      system: prompt.trim(),
+      prompt: content.trim(),
+      maxTokens
+    })
+    return textStream
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw error
+    }
+    if (error instanceof GeminiError) {
+      throw error
+    }
+    throw new GeminiError("Failed to stream response", error)
+  }
+}
+
 module.exports = {
   gemini,
+  geminiStream,
   GeminiError,
   DEFAULT_SAFETY_SETTINGS,
   createGeminiModel

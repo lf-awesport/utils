@@ -3,7 +3,7 @@ const {
   normalizeArticle
 } = require("./tools/perplexityTool")
 const { externalRAGTool } = require("./tools/externalRAGTool")
-const { gemini } = require("../services/gemini")
+const { geminiStream } = require("../services/gemini")
 const {
   chatbotContextPrompt,
   chatbotSystemPrompt,
@@ -110,14 +110,14 @@ const buildSources = ({
   }))
 }
 
-const buildSavePromise = ({ userId, threadId, query, answer }) => {
+const buildSavePromise = ({ userId, threadId, query, answerContent }) => {
   if (!userId || !threadId) return Promise.resolve()
 
   return zepClient.thread
     .addMessages(threadId, {
       messages: [
         { role: "user", content: query },
-        { role: "assistant", content: answer.content }
+        { role: "assistant", content: answerContent }
       ]
     })
     .catch((err) => console.error("Failed to save to Zep:", err))
@@ -182,19 +182,27 @@ async function chatbot({ userId }) {
     }
 
     // 3. Stream risposta con Gemini
-    const answer = await gemini(
+    if (typeof onToken !== "function") {
+      throw new Error("Streaming required: onToken callback missing")
+    }
+
+    let answerContent = ""
+    const textStream = await geminiStream(
       finalUserPrompt,
       finalSystemPrompt,
-      8192,
-      outputSchema
+      8192
     )
+    for await (const chunk of textStream) {
+      answerContent += chunk
+      onToken(chunk)
+    }
 
     // --- PARALLEL SAVING AND DOC PREP ---
     const savePromise = buildSavePromise({
       userId,
       threadId,
       query,
-      answer
+      answerContent
     })
 
     // ----------------------------------------
@@ -207,7 +215,7 @@ async function chatbot({ userId }) {
     })
 
     return {
-      text: answer.content,
+      text: answerContent,
       sources,
       savePromise // Return this so the route handler can await it AFTER sending response
     }
