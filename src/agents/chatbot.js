@@ -28,9 +28,17 @@ const ensureZepSession = async (userId, threadId) => {
     // 1. Ensure User exists
     await zepClient.user
       .add({ userId, email: `${userId}@example.com`, name: userId })
-      .catch((e) => console.error("Zep user creation failed:", e))
+      .catch((e) => {
+        // Ignore 400 (User already exists)
+        if (e.statusCode === 400) return
+        console.error("Zep user creation failed:", e)
+      })
     // 2. Ensure Thread exists
-    await zepClient.thread.create({ threadId, userId }).catch((e) => console.error("Zep thread creation failed:", e))
+    await zepClient.thread.create({ threadId, userId }).catch((e) => {
+      // Ignore 400 (Thread already exists)
+      if (e.statusCode === 400) return
+      console.error("Zep thread creation failed:", e)
+    })
   } catch (err) {
     console.error("Zep initialization warning:", err)
   }
@@ -54,37 +62,50 @@ async function chatbot({ userId }) {
 
     if (userId && threadId) {
       try {
-        await zepSetupPromise
-        // Fetch Context and Messages
-        const [contextRes, messagesRes] = await Promise.all([
-          zepClient.thread.getUserContext(threadId).catch((e) => {
-            console.error("Zep getUserContext failed:", e)
-            return null
-          }),
-          zepClient.thread.get(threadId, { limit: 10 }).catch((e) => {
-            console.error("Zep get messages failed:", e)
-            return null
-          })
-        ])
+        // Wrap Zep logic in a function to race against timeout
+        const zepLogic = async () => {
+          await zepSetupPromise
+          // Fetch Context and Messages
+          const [contextRes, messagesRes] = await Promise.all([
+            zepClient.thread.getUserContext(threadId).catch((e) => {
+              console.error("Zep getUserContext failed:", e)
+              return null
+            }),
+            zepClient.thread.get(threadId, { limit: 10 }).catch((e) => {
+              console.error("Zep get messages failed:", e)
+              return null
+            })
+          ])
 
-        if (messagesRes && messagesRes.messages) {
-          chatLog = messagesRes.messages
-            .map(
-              (m) =>
-                `${
-                  m.role === "user" || m.role === "human" ? "User" : "AI"
-                }: ${m.content}`
-            )
-            .join("\n")
+          if (messagesRes && messagesRes.messages) {
+            chatLog = messagesRes.messages
+              .map(
+                (m) =>
+                  `${
+                    m.role === "user" || m.role === "human" ? "User" : "AI"
+                  }: ${m.content}`
+              )
+              .join("\n")
+          }
+
+          if (contextRes && contextRes.context) {
+            zepContextBlock = `\n\n## 🧠 LONG TERM MEMORY (User Facts):\n${contextRes.context}`
+          }
+
+          fullHistory = chatLog + zepContextBlock
         }
 
-        if (contextRes && contextRes.context) {
-          zepContextBlock = `\n\n## 🧠 LONG TERM MEMORY (User Facts):\n${contextRes.context}`
-        }
+        // Enforce 2s timeout on memory retrieval to prevent production hangs
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Zep retrieval timed out (2s)")),
+            2000
+          )
+        )
 
-        fullHistory = chatLog + zepContextBlock
+        await Promise.race([zepLogic(), timeoutPromise])
       } catch (error) {
-        console.error("Failed to fetch Zep data:", error)
+        console.error("Failed to fetch Zep data (or timed out):", error)
       }
     }
 
