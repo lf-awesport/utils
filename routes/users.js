@@ -1,5 +1,5 @@
 const express = require("express")
-const { zepClient } = require("../src/zep.js")
+const { zepClient } = require("../src/services/zep.js")
 
 const router = express.Router()
 

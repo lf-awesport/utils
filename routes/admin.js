@@ -1,7 +1,10 @@
 const express = require("express")
-const { runAllScrapers } = require("../src/scraper.js")
-const { processArticles, processDailyArticles } = require("../src/sentiment.js")
-const { firestore } = require("../src/firebase.js")
+const { runAllScrapers } = require("../src/scrapers/scraper.js")
+const {
+  processArticles,
+  processDailyArticles
+} = require("../src/analysis/sentiment.js")
+const { firestore } = require("../src/services/firebase.js")
 const { validateUpdateSecret } = require("../middleware/auth.js")
 
 const router = express.Router()

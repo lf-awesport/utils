@@ -1,4 +1,4 @@
-const { gemini } = require("../gemini")
+const { gemini } = require("../services/gemini")
 const z = require("zod")
 
 const routerSchema = z.object({

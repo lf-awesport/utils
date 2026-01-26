@@ -1,20 +1,20 @@
 const { FieldValue } = require("@google-cloud/firestore")
-const { firestore } = require("./firebase.js")
+const { firestore } = require("../services/firebase.js")
 const { jsonSchema } = require("ai")
 const axios = require("axios")
 const rateLimit = require("axios-rate-limit")
 const {
   sentimentAnalysisSystemPrompt,
   dailySystemPrompt
-} = require("./prompts.js")
-const { gemini } = require("./gemini.js")
+} = require("../prompts.js")
+const { gemini } = require("../services/gemini.js")
 require("dotenv").config({ path: require("find-config")(".env") })
-const { generateEmbedding } = require("./embeddings.js")
+const { generateEmbedding } = require("../search/embeddings.js")
 const {
   summarizeSingleArticle,
   generateDailyNarrativeReport
-} = require("./utils/summarizeAndRerank.js")
-const { generateCrosswordFromArticles } = require("./utils/crossword.js")
+} = require("../helpers/summarizeAndRerank.js")
+const { generateCrosswordFromArticles } = require("../helpers/crossword.js")
 
 /**
  * Default configuration for sentiment analysis

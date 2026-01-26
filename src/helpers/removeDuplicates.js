@@ -1,4 +1,4 @@
-const { firestore } = require("../firebase")
+const { firestore } = require("../services/firebase")
 
 async function removeDuplicateUrls({ dryRun = true } = {}) {
   const collections = ["posts", "sentiment"]

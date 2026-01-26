@@ -1,6 +1,6 @@
 const { tool } = require("ai")
 const z = require("zod")
-const { firestore } = require("../firebase")
+const { firestore } = require("../services/firebase")
 const rng = require("seedrandom")
 
 function generateId(seed) {

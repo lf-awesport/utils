@@ -16,6 +16,9 @@ const config = {
 // Initialize Express app
 const app = express()
 
+// Trust proxy is required for Vercel/proxies to ensuring accurate rate limiting
+app.set("trust proxy", 1)
+
 // Middleware
 app.use(cors())
 app.use(express.json())

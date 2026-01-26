@@ -1,6 +1,6 @@
 // utils/src/coverPrompt.js
-const { firestore } = require("./firebase")
-const { gemini } = require("./gemini")
+const { firestore } = require("../services/firebase")
+const { gemini } = require("../services/gemini")
 const { jsonSchema } = require("ai")
 
 /**

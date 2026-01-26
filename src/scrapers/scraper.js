@@ -3,7 +3,7 @@ const Stealth = require("puppeteer-extra-plugin-stealth")
 puppeteerExtra.use(Stealth())
 const Pool = require("es6-promise-pool")
 const rng = require("seedrandom")
-const { firestore } = require("./firebase") // ⚠️ Usa Firestore SDK Cloud
+const { firestore } = require("../services/firebase") // ⚠️ Usa Firestore SDK Cloud
 
 //helper function to parse italian date
 function parseItalianDate(dateStr) {

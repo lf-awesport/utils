@@ -2,8 +2,8 @@
 // Gestisce il batch processing per generare il campo 'rerank_summary'
 // usando Gemini e aggiornando Firestore con paginazione basata sul cursore.
 
-const { firestore } = require("../firebase")
-const { gemini } = require("../gemini")
+const { firestore } = require("../services/firebase")
+const { gemini } = require("../services/gemini")
 const { z } = require("zod")
 
 // --- CONFIGURAZIONE E COSTANTI ---

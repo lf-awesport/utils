@@ -5,15 +5,15 @@ const {
   normalizeArticle
 } = require("../tools/perplexityDbTool")
 const { mergeResultsTool } = require("../tools/mergeResultsTool")
-const { gemini } = require("../gemini")
+const { gemini } = require("../services/gemini")
 const {
   chatbotContextPrompt,
   chatbotSystemPrompt,
   conversationalContextPrompt,
   conversationalSystemPrompt
 } = require("../prompts.js")
-const { createContext } = require("../queryRAG")
-const { zepClient } = require("../zep")
+const { createContext } = require("../search/queryRAG")
+const { zepClient } = require("../services/zep")
 const { toolRouter } = require("./router")
 const z = require("zod")
 

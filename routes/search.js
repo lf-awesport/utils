@@ -1,5 +1,5 @@
 const express = require("express")
-const { searchAndRerank } = require("../src/queryRAG.js")
+const { searchAndRerank } = require("../src/search/queryRAG.js")
 const { validateQuery } = require("../middleware/validators.js")
 
 const router = express.Router()

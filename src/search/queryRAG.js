@@ -1,4 +1,4 @@
-const { firestore } = require("./firebase") // Firebase/Firestore client (@google-cloud/firestore)
+const { firestore } = require("../services/firebase") // Firebase/Firestore client (@google-cloud/firestore)
 const { generateEmbedding } = require("./embeddings")
 const { rerankDocuments } = require("./reranker")
 
