@@ -8,7 +8,9 @@ const validateQuery = (req, res, next) => {
   const query = req.body.q || req.body.query
 
   if (!query || typeof query !== "string") {
-    return next(AppError.badRequest("Missing or invalid 'query' in request body"))
+    return next(
+      AppError.badRequest("Missing or invalid 'query' in request body")
+    )
   }
 
   if (query.length > config.maxQueryLength) {

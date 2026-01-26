@@ -38,9 +38,8 @@ function normalizeArticle(article) {
   }
 }
 
-async function findExistingPost(url, title) {
-  // Gli articoli sono già normalizzati e con id
-  const postRef = firestore.collection("posts").doc(url)
+async function findExistingPost(docId) {
+  const postRef = firestore.collection("posts").doc(docId)
   const postSnap = await postRef.get()
   if (postSnap.exists) {
     return postSnap.data()
@@ -49,27 +48,35 @@ async function findExistingPost(url, title) {
 }
 
 async function savePerplexityArticle(article) {
-  const existing = await findExistingPost(article.id)
+  const normalized = normalizeArticle(article)
+  const existing = await findExistingPost(normalized.id)
   if (existing) {
     return existing
   }
   await firestore
     .collection("posts")
-    .doc(article.id)
-    .set(article, { merge: true })
-  return article
+    .doc(normalized.id)
+    .set(normalized, { merge: true })
+  return normalized
 }
 
 const perplexityDbTool = tool({
   description:
-    "Salva uno o più articoli Perplexity nel database, deduplicando per URL/titolo.",
+    "Salva uno o più articoli Perplexity nel database, deduplicando per ID stabile (URL/titolo).",
   inputSchema: z.object({
     articles: z.array(
       z.object({
-        title: z.string(),
-        url: z.string(),
-        snippet: z.string(),
-        date: z.string().optional()
+        id: z.string().optional(),
+        title: z.string().optional(),
+        url: z.string().optional(),
+        snippet: z.string().optional(),
+        date: z.string().optional(),
+        body: z.string().optional(),
+        excerpt: z.string().optional(),
+        imgLink: z.string().optional(),
+        author: z.string().optional(),
+        processed: z.boolean().optional(),
+        createdAt: z.any().optional()
       })
     )
   }),

@@ -116,6 +116,9 @@ async function chatbot({ userId }) {
     let finalSystemPrompt = conversationalSystemPrompt
     let finalUserPrompt = ""
     const currentDate = new Date().toISOString().slice(0, 10)
+    let ragDocs = []
+    let perplexityDocs = []
+    let mergedDocs = []
 
     // A. RAG MODE
     if (decision.tools.length > 0) {
@@ -135,8 +138,8 @@ async function chatbot({ userId }) {
       ragResult = results[0]
       perplexityResult = results[1]
 
-      const ragDocs = ragResult.docs || []
-      const perplexityDocs = (perplexityResult.results || [])
+      ragDocs = ragResult.docs || []
+      perplexityDocs = (perplexityResult.results || [])
         .map(normalizeArticle)
         .map((a) => ({ data: a }))
 
@@ -145,7 +148,8 @@ async function chatbot({ userId }) {
         perplexityResults: perplexityDocs
       })
 
-      const context = createContext(mergeResult.merged || [])
+      mergedDocs = mergeResult.merged || []
+      const context = createContext(mergedDocs)
 
       finalUserPrompt = chatbotContextPrompt(
         query,
@@ -174,12 +178,6 @@ async function chatbot({ userId }) {
     )
 
     // --- PARALLEL SAVING AND DOC PREP ---
-    // Prepare documents first as they are needed for both saving and source listing
-    const ragDocs = ragResult.docs || []
-    const perplexityDocs = (perplexityResult.results || [])
-      .map(normalizeArticle)
-      .map((a) => ({ data: a }))
-
     const ragUrls = new Set(ragDocs.map((d) => d.url))
     const newArticles = []
     for (const article of perplexityDocs) {
@@ -224,11 +222,10 @@ async function chatbot({ userId }) {
     // Includi anche le fonti (mergeResult.merged) in formato flat per il front-end
     let sources = []
     if (decision.tools.length > 0) {
-      // Need to re-merge or just use what we have available
-      // The mergeResult was defined inside the IF previously, now it's out of scope or we need to access it
-      // Let's re-run merge or just map directly from what we have since we can't easily hoist the complex merge object
-      // Actually, let's just create a quick source list
-      const allDocs = [...ragDocs, ...perplexityDocs.map((p) => p.data)]
+      const allDocs =
+        mergedDocs.length > 0
+          ? mergedDocs.map((d) => d.data)
+          : [...ragDocs, ...perplexityDocs.map((p) => p.data)]
       sources = allDocs.map((d, i) => ({
         url: d.url || "",
         title: `[${i + 1}]`,

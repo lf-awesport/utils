@@ -10,7 +10,9 @@ const validateUpdateSecret = (req, res, next) => {
   }
 
   if (providedSecret !== config.updateSecret) {
-    return next(AppError.unauthorized("Unauthorized: Invalid or missing secret"))
+    return next(
+      AppError.unauthorized("Unauthorized: Invalid or missing secret")
+    )
   }
 
   next()
