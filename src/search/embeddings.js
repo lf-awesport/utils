@@ -33,7 +33,13 @@ function validateInput(text) {
  */
 function validateConfig() {
   requireEnv(
-    ["PROJECT_ID", "LOCATION", "EMBEDDING_MODEL", "CLIENT_EMAIL", "PRIVATE_KEY"],
+    [
+      "PROJECT_ID",
+      "LOCATION",
+      "EMBEDDING_MODEL",
+      "CLIENT_EMAIL",
+      "PRIVATE_KEY"
+    ],
     () => new EmbeddingError("Missing required environment variable")
   )
 }

@@ -31,9 +31,7 @@ if (CLIENT_EMAIL && PRIVATE_KEY) {
 } else if (config.googleCredentialsJson) {
   // Fallback all'uso del JSON intero (se lo hai definito, Opzione B precedente)
   try {
-    authOptions.credentials = JSON.parse(
-      config.googleCredentialsJson
-    )
+    authOptions.credentials = JSON.parse(config.googleCredentialsJson)
   } catch (e) {}
 }
 

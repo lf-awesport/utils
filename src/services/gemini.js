@@ -64,10 +64,7 @@ function validateInput(content, prompt, maxTokens, schema) {
  * @throws {GeminiError} If model initialization fails
  */
 function createGeminiModel(headers = {}) {
-  requireEnv(
-    ["PROJECT_ID", "LOCATION", "MODEL"],
-    (msg) => new GeminiError(msg)
-  )
+  requireEnv(["PROJECT_ID", "LOCATION", "MODEL"], (msg) => new GeminiError(msg))
 
   try {
     const vertex_ai = createVertex({
