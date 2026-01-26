@@ -56,9 +56,8 @@ async function chatbot({ userId }) {
         : Promise.resolve()
 
     // --- PHASE 1: RETRIEVE MEMORY ---
-    let fullHistory = ""
     let chatLog = ""
-    let zepContextBlock = ""
+    let zepContextString = ""
 
     if (userId && threadId) {
       try {
@@ -89,13 +88,12 @@ async function chatbot({ userId }) {
           }
 
           if (contextRes && contextRes.context) {
-            zepContextBlock = `\n\n## 🧠 LONG TERM MEMORY (User Facts):\n${contextRes.context}`
+            zepContextString = contextRes.context
           }
-
-          fullHistory = chatLog + zepContextBlock
         }
 
         // Enforce 2s timeout on memory retrieval to prevent production hangs
+        // ... same timeout logic ...
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(
             () => reject(new Error("Zep retrieval timed out (2s)")),
@@ -153,7 +151,8 @@ async function chatbot({ userId }) {
         query,
         context,
         currentDate,
-        fullHistory
+        chatLog,
+        zepContextString
       )
     }
     // B. CONVERSATIONAL MODE
@@ -161,7 +160,8 @@ async function chatbot({ userId }) {
       finalUserPrompt = conversationalContextPrompt(
         query,
         currentDate,
-        fullHistory
+        chatLog,
+        zepContextString
       )
     }
 
@@ -214,9 +214,10 @@ async function chatbot({ userId }) {
     // 3. DO NOT AWAIT HERE. Return the promise to the controller.
     // We group them into one promise to be handled by the caller.
     const savePromise = Promise.allSettled(backgroundTasks).then((results) => {
-        results.forEach((res, i) => {
-            if(res.status === 'rejected') console.error(`Background task ${i} failed:`, res.reason)
-        })
+      results.forEach((res, i) => {
+        if (res.status === "rejected")
+          console.error(`Background task ${i} failed:`, res.reason)
+      })
     })
 
     // ----------------------------------------

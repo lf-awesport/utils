@@ -1,6 +1,6 @@
 const { createVertex } = require("@ai-sdk/google-vertex")
 const { generateObject } = require("ai")
-require("dotenv").config({ path: require("find-config")(".env") })
+const { config, requireEnv } = require("../config")
 
 /**
  * Default safety settings for the Gemini model
@@ -64,26 +64,25 @@ function validateInput(content, prompt, maxTokens, schema) {
  * @throws {GeminiError} If model initialization fails
  */
 function createGeminiModel(headers = {}) {
-  if (!process.env.PROJECT_ID || !process.env.LOCATION || !process.env.MODEL) {
-    throw new GeminiError(
-      "Missing required environment variables: PROJECT_ID, LOCATION, or MODEL"
-    )
-  }
+  requireEnv(
+    ["PROJECT_ID", "LOCATION", "MODEL"],
+    (msg) => new GeminiError(msg)
+  )
 
   try {
     const vertex_ai = createVertex({
-      project: process.env.PROJECT_ID,
-      location: process.env.LOCATION,
+      project: config.projectId,
+      location: config.location,
       googleAuthOptions: {
         credentials: {
-          client_email: process.env.CLIENT_EMAIL,
-          private_key: process.env.PRIVATE_KEY
+          client_email: config.clientEmail,
+          private_key: config.privateKey
         }
       },
       headers
     })
 
-    return vertex_ai(process.env.MODEL, {
+    return vertex_ai(config.model, {
       structuredOutputs: true,
       temperature: 0,
       topP: 0,
@@ -93,15 +92,6 @@ function createGeminiModel(headers = {}) {
   } catch (error) {
     throw new GeminiError("Failed to initialize Gemini model", error)
   }
-}
-
-// Initialize the Gemini model
-let generativeModel
-try {
-  generativeModel = createGeminiModel()
-} catch (error) {
-  console.error("Failed to initialize Gemini model:", error.message)
-  throw error
 }
 
 /**
@@ -117,6 +107,10 @@ try {
 async function gemini(content, prompt, maxTokens, schema) {
   validateInput(content, prompt, maxTokens, schema)
   try {
+    // Initialize the Gemini model
+    let generativeModel
+    generativeModel = createGeminiModel()
+
     const { object } = await generateObject({
       model: generativeModel,
       system: prompt.trim(),

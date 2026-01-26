@@ -8,7 +8,6 @@ const {
   dailySystemPrompt
 } = require("../prompts.js")
 const { gemini } = require("../services/gemini.js")
-require("dotenv").config({ path: require("find-config")(".env") })
 const { generateEmbedding } = require("../search/embeddings.js")
 const {
   summarizeSingleArticle,

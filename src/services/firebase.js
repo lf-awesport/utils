@@ -1,5 +1,5 @@
 const { Firestore } = require("@google-cloud/firestore")
-require("dotenv").config({ path: require("find-config")(".env") })
+const { config, requireEnv } = require("../config")
 
 /**
  * Custom error class for Firebase-related errors
@@ -17,17 +17,10 @@ class FirebaseError extends Error {
  * @throws {FirebaseError} If required environment variables are missing
  */
 function validateConfig() {
-  const requiredVars = [
-    "FB_PROJECT_ID",
-    "FB_CLIENT_EMAIL",
-    "FB_PRIVATE_KEY"
-  ]
-
-  for (const varName of requiredVars) {
-    if (!process.env[varName]) {
-      throw new FirebaseError(`Missing required environment variable: ${varName}`)
-    }
-  }
+  requireEnv(
+    ["FB_PROJECT_ID", "FB_CLIENT_EMAIL", "FB_PRIVATE_KEY"],
+    (msg) => new FirebaseError(msg)
+  )
 }
 
 /**
@@ -39,13 +32,13 @@ function createFirestoreClient() {
   try {
     validateConfig()
     return new Firestore({
-      projectId: process.env.FB_PROJECT_ID,
+      projectId: config.firebase.projectId,
       credentials: {
         //CREATE SERVICE ACCOUNT WITH PERMISSIONS: Cloud Datastore Owner
         // Firebase Admin SDK Administrator Service Agent
         // Service Account Token Creator
-        client_email: process.env.FB_CLIENT_EMAIL,
-        private_key: process.env.FB_PRIVATE_KEY
+        client_email: config.firebase.clientEmail,
+        private_key: config.firebase.privateKey
       }
     })
   } catch (error) {

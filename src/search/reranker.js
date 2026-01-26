@@ -1,19 +1,19 @@
 // src/utils/reranker.js
 const axios = require("axios")
-require("dotenv").config({ path: require("find-config")(".env") })
 const { GoogleAuth } = require("google-auth-library")
+const { config } = require("../config")
 
 // --- CONFIGURAZIONE API ---
-const PROJECT_ID = process.env.PROJECT_ID
+const PROJECT_ID = config.projectId
 const LOCATION = "global"
 const RANKING_CONFIG_ID = "default_ranking_config"
 const MODEL_NAME = "semantic-ranker-default@latest"
 
 // Variabili d'ambiente per la Service Account (chiavi separate)
-const CLIENT_EMAIL = process.env.CLIENT_EMAIL
+const CLIENT_EMAIL = config.clientEmail
 // La chiave privata è spesso quotata nel file .env; assicuriamoci che sia pulita
-const PRIVATE_KEY = process.env.PRIVATE_KEY
-  ? process.env.PRIVATE_KEY.replace(/\\n/g, "\n")
+const PRIVATE_KEY = config.privateKey
+  ? config.privateKey.replace(/\n/g, "\n")
   : null
 
 // Lo scope necessario per Discovery Engine/Vertex AI Search
@@ -28,11 +28,11 @@ if (CLIENT_EMAIL && PRIVATE_KEY) {
     client_email: CLIENT_EMAIL,
     private_key: PRIVATE_KEY
   }
-} else if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+} else if (config.googleCredentialsJson) {
   // Fallback all'uso del JSON intero (se lo hai definito, Opzione B precedente)
   try {
     authOptions.credentials = JSON.parse(
-      process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+      config.googleCredentialsJson
     )
   } catch (e) {}
 }

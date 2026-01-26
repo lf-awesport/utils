@@ -143,25 +143,38 @@ Please extract the following fields to improve search, filtering, and generation
 
 module.exports.sentimentAnalysisSystemPrompt = sentimentAnalysisSystemPrompt
 
-const chatbotContextPrompt = (query, articleContext, currentDate, history) => `
-      ## ❓ DOMANDA UTENTE
-      ${query}
+const chatbotContextPrompt = (
+  query,
+  articleContext,
+  currentDate,
+  history,
+  zepContext
+) => `
+      ## 🧠 CONTESTO UTENTE (Memoria a Lungo Termine)
+      ${zepContext || "Nessuna informazione memorizzata."}
+      
+      ---
+
+      ## 📜 CRONOLOGIA CHAT
+      ${history || "Inizio della conversazione."}
 
       ---
 
-      ## ⏰ CONTESTO TEMPORALE
-      La data odierna è: ${currentDate}
-
-      ---
-
-      ${history ? `## 📜 CRONOLOGIA CHAT\n${history}\n\n---` : ""}
-
-      ## 📑 CONTESTO (Articoli Rilevanti)
+      ## 📑 DATI DI RICERCA (Articoli Rilevanti)
       ${articleContext}
       
       ---
+
+      ## ⏰ DATA
+      ${currentDate}
+
+      ---
+
+      ## ❓ DOMANDA UTENTE
+      ${query}
       
-      Utilizza il contesto fornito sopra per rispondere alla DOMANDA UTENTE in italiano, seguendo le istruzioni della tua persona.
+      Utilizza il contesto fornito per rispondere alla DOMANDA UTENTE in italiano.
+      IMPORTANTE: Usa la "Memoria a Lungo Termine" solo per personalizzare il tono o i riferimenti, ma dai sempre la priorità ai "Dati di Ricerca" e alla "Domanda Utente" attuale.
     `
 module.exports.chatbotContextPrompt = chatbotContextPrompt
 
@@ -227,9 +240,19 @@ Usa Markdown standard per migliorare la leggibilità (grassetti per concetti chi
 Scrivi sempre in italiano.
 `
 
-const conversationalContextPrompt = (query, currentDate, history) => `
-      ## ❓ MESSAGGIO UTENTE
-      ${query}
+const conversationalContextPrompt = (
+  query,
+  currentDate,
+  history,
+  zepContext
+) => `
+      ## 🧠 MEMORIA (Fatti sull'utente)
+      ${zepContext || "Nessun background noto."}
+
+      ---
+
+      ## 📜 CRONOLOGIA
+      ${history || "Nessuna cronologia recente."}
 
       ---
 
@@ -238,9 +261,11 @@ const conversationalContextPrompt = (query, currentDate, history) => `
 
       ---
 
-      ${history ? `## 📜 CRONOLOGIA RECENTE\n${history}\n\n---` : ""}
+      ## ❓ MESSAGGIO UTENTE
+      ${query}
       
-      Rispondi al messaggio dell'utente partecipando alla conversazione.
+      Rispondi all'utente in modo naturale.
+      ISTRUZIONE CHIAVE: La "Memoria" serve solo per contesto. Non menzionare argomenti della memoria a meno che non siano strettamente pertinenti al MESSAGGIO UTENTE attuale.
 `
 
 module.exports.chatbotSystemPrompt = chatbotSystemPrompt

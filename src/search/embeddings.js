@@ -1,5 +1,6 @@
 const { embed } = require("ai")
 const { createVertex } = require("@ai-sdk/google-vertex")
+const { config, requireEnv } = require("../config")
 
 /**
  * Custom error class for embedding-related errors
@@ -31,19 +32,10 @@ function validateInput(text) {
  * @throws {EmbeddingError} If required environment variables are missing
  */
 function validateConfig() {
-  const requiredVars = [
-    "PROJECT_ID",
-    "LOCATION",
-    "EMBEDDING_MODEL",
-    "CLIENT_EMAIL",
-    "PRIVATE_KEY"
-  ]
-
-  for (const varName of requiredVars) {
-    if (!process.env[varName]) {
-      throw new EmbeddingError("Missing required environment variable")
-    }
-  }
+  requireEnv(
+    ["PROJECT_ID", "LOCATION", "EMBEDDING_MODEL", "CLIENT_EMAIL", "PRIVATE_KEY"],
+    () => new EmbeddingError("Missing required environment variable")
+  )
 }
 
 /**
@@ -55,12 +47,12 @@ function createVertexClient() {
   try {
     validateConfig()
     return createVertex({
-      project: process.env.PROJECT_ID,
-      location: process.env.LOCATION,
+      project: config.projectId,
+      location: config.location,
       googleAuthOptions: {
         credentials: {
-          client_email: process.env.CLIENT_EMAIL,
-          private_key: process.env.PRIVATE_KEY
+          client_email: config.clientEmail,
+          private_key: config.privateKey
         }
       }
     })
