@@ -3,7 +3,7 @@ const { runAllScrapers } = require("../src/scrapers/scraper.js")
 const {
   processArticles,
   processDailyArticles
-} = require("../src/analysis/sentiment.js")
+} = require("../src/generation/sentiment.js")
 const { firestore } = require("../src/services/firebase.js")
 const { validateUpdateSecret } = require("../middleware/auth.js")
 

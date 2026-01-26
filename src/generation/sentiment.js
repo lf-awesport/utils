@@ -8,12 +8,11 @@ const {
   dailySystemPrompt
 } = require("../prompts.js")
 const { gemini } = require("../services/gemini.js")
-const { generateEmbedding } = require("../search/embeddings.js")
+const { generateEmbedding } = require("../retrieval/embeddings.js")
 const {
   summarizeSingleArticle,
   generateDailyNarrativeReport
-} = require("../helpers/summarizeAndRerank.js")
-const { generateCrosswordFromArticles } = require("../helpers/crossword.js")
+} = require("./summarizeAndRerank.js")
 
 /**
  * Default configuration for sentiment analysis
@@ -271,27 +270,8 @@ async function processArticles() {
           )
           batch = firestore.batch()
         }
-
-        // Dopo il salvataggio, genera e salva il cruciverba per l'articolo
-        try {
-          const crossword = await generateCrosswordFromArticles({
-            articles: [processedDoc],
-            type: "single"
-          })
-          await firestore
-            .collection("crosswords")
-            .doc(post.id)
-            .set({ crossword, createdAt: new Date() })
-        } catch (err) {
-          console.warn(
-            `⚠️ Cruciverba non generato per articolo ${post.id}: ${err.message}`
-          )
-        }
       } catch (error) {
-        console.warn(`⚠️ Skipping article ${post.id}: ${error.message}`)
-        if (error.originalError) {
-          console.debug("Original error:", error.originalError)
-        }
+        console.error(`❌ Error processing post ${post.id}:`, error.message)
       }
     }
 
@@ -314,13 +294,6 @@ async function processArticles() {
   }
 }
 
-module.exports = {
-  processArticles,
-  SentimentError,
-  DEFAULT_CONFIG, // Exported for testing
-  SENTIMENT_SCHEMA, // Exported for testing
-  processDailyArticles
-}
 /**
  * Concatena tutti i post di una data in un unico articolo e processa con sentiment analysis
  * @param {string|Date} date - Data in formato 'YYYY-MM-DD' o oggetto Date
@@ -388,4 +361,12 @@ async function processDailyArticles(date) {
     )
 
   return result
+}
+
+module.exports = {
+  processArticles,
+  SentimentError,
+  DEFAULT_CONFIG, // Exported for testing
+  SENTIMENT_SCHEMA, // Exported for testing
+  processDailyArticles
 }

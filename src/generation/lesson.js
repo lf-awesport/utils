@@ -1,7 +1,7 @@
 const { firestore } = require("../services/firebase")
 const { z } = require("zod")
 const { gemini } = require("../services/gemini")
-const { searchSimilarDocuments } = require("../search/queryRAG")
+const { searchSimilarDocuments } = require("../retrieval/queryRAG")
 
 const levelZod = z.object({
   levelTitle: z.string(),

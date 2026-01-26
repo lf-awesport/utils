@@ -1,5 +1,5 @@
 const { tool } = require("ai")
-const { searchAndRerank, createContext } = require("../search/queryRAG")
+const { searchAndRerank, createContext } = require("../../retrieval/queryRAG")
 const z = require("zod")
 
 const externalRAGTool = tool({

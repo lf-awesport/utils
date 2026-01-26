@@ -1,6 +1,42 @@
 const { tool } = require("ai")
 const z = require("zod")
 const Perplexity = require("@perplexity-ai/perplexity_ai")
+const rng = require("seedrandom")
+
+function generateId(seed) {
+  return rng(seed)().toString()
+}
+
+function normalizeArticle(article) {
+  const {
+    id,
+    title,
+    url,
+    snippet,
+    date,
+    body,
+    excerpt,
+    imgLink,
+    author,
+    processed,
+    createdAt
+  } = article
+  const cleanTitle = title?.trim() || ""
+  const cleanUrl = url?.trim() || ""
+  const docId = id || generateId(cleanTitle || cleanUrl)
+  return {
+    id: docId,
+    title: cleanTitle,
+    url: cleanUrl,
+    body: body || snippet || "",
+    excerpt: excerpt || snippet?.split("\n")[0] || snippet || "",
+    date: date || null,
+    imgLink: imgLink || null,
+    author: author || "Perplexity",
+    processed: processed || false,
+    createdAt: createdAt || new Date()
+  }
+}
 
 // Zod schema for all advanced options
 const perplexityInputSchema = z.object({
@@ -42,5 +78,6 @@ const perplexitySearchTool = tool({
 })
 
 module.exports = {
-  perplexitySearchTool
+  perplexitySearchTool,
+  normalizeArticle
 }

@@ -1,10 +1,8 @@
-const { perplexitySearchTool } = require("../tools/perplexityTool")
-const { externalRAGTool } = require("../tools/externalRAGTool")
 const {
-  perplexityDbTool,
+  perplexitySearchTool,
   normalizeArticle
-} = require("../tools/perplexityDbTool")
-const { mergeResultsTool } = require("../tools/mergeResultsTool")
+} = require("./tools/perplexityTool")
+const { externalRAGTool } = require("./tools/externalRAGTool")
 const { gemini } = require("../services/gemini")
 const {
   chatbotContextPrompt,
@@ -12,8 +10,12 @@ const {
   conversationalContextPrompt,
   conversationalSystemPrompt
 } = require("../prompts.js")
-const { createContext } = require("../search/queryRAG")
-const { zepClient } = require("../services/zep")
+const { createContext } = require("../retrieval/queryRAG")
+const {
+  zepClient,
+  ensureZepSession,
+  fetchZepMemory
+} = require("../services/zep")
 const { toolRouter } = require("./router")
 const z = require("zod")
 
@@ -22,26 +24,103 @@ const outputSchema = z.object({
   content: z.string()
 })
 
-// Helper to safely initialize Zep user/thread
-const ensureZepSession = async (userId, threadId) => {
+const ZEP_TIMEOUT_MS = 2000
+const ZEP_MESSAGES_LIMIT = 10
+
+const withTimeout = (promise, ms, message) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms))
+  ])
+
+const fetchZepMemoryWithTimeout = async ({
+  userId,
+  threadId,
+  zepSetupPromise
+}) => {
+  if (!userId || !threadId) return { chatLog: "", zepContextString: "" }
+
   try {
-    // 1. Ensure User exists
-    await zepClient.user
-      .add({ userId, email: `${userId}@example.com`, name: userId })
-      .catch((e) => {
-        // Ignore 400 (User already exists)
-        if (e.statusCode === 400) return
-        console.error("Zep user creation failed:")
-      })
-    // 2. Ensure Thread exists
-    await zepClient.thread.create({ threadId, userId }).catch((e) => {
-      // Ignore 400 (Thread already exists)
-      if (e.statusCode === 400) return
-      console.error("Zep thread creation failed:")
-    })
-  } catch (err) {
-    console.error("Zep initialization warning:", err)
+    return await withTimeout(
+      (async () => {
+        await zepSetupPromise
+        return fetchZepMemory({
+          userId,
+          threadId,
+          zepSetupPromise,
+          limit: ZEP_MESSAGES_LIMIT
+        })
+      })(),
+      ZEP_TIMEOUT_MS,
+      `Zep retrieval timed out (${ZEP_TIMEOUT_MS}ms)`
+    )
+  } catch (error) {
+    console.error("Failed to fetch Zep data (or timed out):", error)
   }
+
+  return { chatLog: "", zepContextString: "" }
+}
+
+const runTools = async ({ query, useRag, usePerp }) => {
+  const promises = []
+  promises.push(
+    useRag ? externalRAGTool.execute({ query }) : Promise.resolve({ docs: [] })
+  )
+  promises.push(
+    usePerp
+      ? perplexitySearchTool.execute({ query })
+      : Promise.resolve({ results: [] })
+  )
+
+  const [ragResult, perplexityResult] = await Promise.all(promises)
+
+  const ragDocs = ragResult.docs || []
+  const perplexityDocs = (perplexityResult.results || [])
+    .map(normalizeArticle)
+    .map((a) => ({ data: a }))
+
+  const ragUrls = new Set(ragDocs.map((d) => d.url))
+  const filteredPerpDocs = perplexityDocs.filter(
+    (p) => p.data.url && !ragUrls.has(p.data.url)
+  )
+
+  const combinedDocs = [...ragDocs, ...filteredPerpDocs]
+  const context = createContext(combinedDocs)
+
+  return { ragDocs, perplexityDocs: filteredPerpDocs, combinedDocs, context }
+}
+
+const buildSources = ({
+  decisionTools,
+  combinedDocs,
+  ragDocs,
+  perplexityDocs
+}) => {
+  if (decisionTools.length === 0) return []
+
+  const allDocs =
+    combinedDocs.length > 0
+      ? combinedDocs.map((d) => d.data)
+      : [...ragDocs, ...perplexityDocs.map((p) => p.data)]
+
+  return allDocs.map((d, i) => ({
+    url: d.url || "",
+    title: `[${i + 1}]`,
+    date: d.date || ""
+  }))
+}
+
+const buildSavePromise = ({ userId, threadId, query, answer }) => {
+  if (!userId || !threadId) return Promise.resolve()
+
+  return zepClient.thread
+    .addMessages(threadId, {
+      messages: [
+        { role: "user", content: query },
+        { role: "assistant", content: answer.content }
+      ]
+    })
+    .catch((err) => console.error("Failed to save to Zep:", err))
 }
 
 async function chatbot({ userId }) {
@@ -56,101 +135,34 @@ async function chatbot({ userId }) {
         : Promise.resolve()
 
     // --- PHASE 1: RETRIEVE MEMORY ---
-    let chatLog = ""
-    let zepContextString = ""
-
-    if (userId && threadId) {
-      try {
-        // Wrap Zep logic in a function to race against timeout
-        const zepLogic = async () => {
-          await zepSetupPromise
-          // Fetch Context and Messages
-          const [contextRes, messagesRes] = await Promise.all([
-            zepClient.thread.getUserContext(threadId).catch((e) => {
-              console.error("Zep getUserContext failed:", e)
-              return null
-            }),
-            zepClient.thread.get(threadId, { limit: 10 }).catch((e) => {
-              console.error("Zep get messages failed:", e)
-              return null
-            })
-          ])
-
-          if (messagesRes && messagesRes.messages) {
-            chatLog = messagesRes.messages
-              .map(
-                (m) =>
-                  `${
-                    m.role === "user" || m.role === "human" ? "User" : "AI"
-                  }: ${m.content}`
-              )
-              .join("\n")
-          }
-
-          if (contextRes && contextRes.context) {
-            zepContextString = contextRes.context
-          }
-        }
-
-        // Enforce 2s timeout on memory retrieval to prevent production hangs
-        // ... same timeout logic ...
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Zep retrieval timed out (2s)")),
-            2000
-          )
-        )
-
-        await Promise.race([zepLogic(), timeoutPromise])
-      } catch (error) {
-        console.error("Failed to fetch Zep data (or timed out):", error)
-      }
-    }
+    const { chatLog, zepContextString } = await fetchZepMemoryWithTimeout({
+      userId,
+      threadId,
+      zepSetupPromise
+    })
 
     // --- PHASE 2: ROUTER DECISION ---
     const decision = await toolRouter({ query, history: chatLog })
 
     // --- PHASE 3: CONDITIONAL TOOL EXECUTION ---
-    let ragResult = { docs: [] }
-    let perplexityResult = { results: [] }
-    let finalSystemPrompt = conversationalSystemPrompt
-    let finalUserPrompt = ""
     const currentDate = new Date().toISOString().slice(0, 10)
     let ragDocs = []
     let perplexityDocs = []
-    let mergedDocs = []
+    let combinedDocs = []
+    let finalSystemPrompt = conversationalSystemPrompt
+    let finalUserPrompt = ""
 
     // A. RAG MODE
     if (decision.tools.length > 0) {
-      finalSystemPrompt = chatbotSystemPrompt
-
       const useRag = decision.tools.includes("rag")
       const usePerp = decision.tools.includes("perplexity")
+      const toolsResult = await runTools({ query, useRag, usePerp })
+      ragDocs = toolsResult.ragDocs
+      perplexityDocs = toolsResult.perplexityDocs
+      combinedDocs = toolsResult.combinedDocs
 
-      const promises = []
-      if (useRag) promises.push(externalRAGTool.execute({ query }))
-      else promises.push(Promise.resolve({ docs: [] }))
-
-      if (usePerp) promises.push(perplexitySearchTool.execute({ query }))
-      else promises.push(Promise.resolve({ results: [] }))
-
-      const results = await Promise.all(promises)
-      ragResult = results[0]
-      perplexityResult = results[1]
-
-      ragDocs = ragResult.docs || []
-      perplexityDocs = (perplexityResult.results || [])
-        .map(normalizeArticle)
-        .map((a) => ({ data: a }))
-
-      const mergeResult = await mergeResultsTool.execute({
-        ragResults: ragDocs,
-        perplexityResults: perplexityDocs
-      })
-
-      mergedDocs = mergeResult.merged || []
-      const context = createContext(mergedDocs)
-
+      const context = toolsResult.context
+      finalSystemPrompt = chatbotSystemPrompt
       finalUserPrompt = chatbotContextPrompt(
         query,
         context,
@@ -178,61 +190,21 @@ async function chatbot({ userId }) {
     )
 
     // --- PARALLEL SAVING AND DOC PREP ---
-    const ragUrls = new Set(ragDocs.map((d) => d.url))
-    const newArticles = []
-    for (const article of perplexityDocs) {
-      if (article.data.url && !ragUrls.has(article.data.url)) {
-        newArticles.push(article.data)
-      }
-    }
-
-    const backgroundTasks = []
-
-    // 1. Queue Zep Save
-    if (userId && threadId) {
-      const zepSavePromise = zepClient.thread
-        .addMessages(threadId, {
-          messages: [
-            { role: "user", content: query },
-            { role: "assistant", content: answer.content }
-          ]
-        })
-        .catch((err) => console.error("Failed to save to Zep:", err))
-      backgroundTasks.push(zepSavePromise)
-    }
-
-    // 2. Queue Article Save
-    if (newArticles.length > 0) {
-      const dbSavePromise = perplexityDbTool
-        .execute({ articles: newArticles })
-        .catch((err) => console.error("Background save error:", err))
-      backgroundTasks.push(dbSavePromise)
-    }
-
-    // 3. DO NOT AWAIT HERE. Return the promise to the controller.
-    // We group them into one promise to be handled by the caller.
-    const savePromise = Promise.allSettled(backgroundTasks).then((results) => {
-      results.forEach((res, i) => {
-        if (res.status === "rejected")
-          console.error(`Background task ${i} failed:`, res.reason)
-      })
+    const savePromise = buildSavePromise({
+      userId,
+      threadId,
+      query,
+      answer
     })
 
     // ----------------------------------------
     // Includi anche le fonti (mergeResult.merged) in formato flat per il front-end
-    let sources = []
-    if (decision.tools.length > 0) {
-      const allDocs =
-        mergedDocs.length > 0
-          ? mergedDocs.map((d) => d.data)
-          : [...ragDocs, ...perplexityDocs.map((p) => p.data)]
-      sources = allDocs.map((d, i) => ({
-        url: d.url || "",
-        title: `[${i + 1}]`,
-        date: d.date || ""
-      }))
-      // REMOVED .slice(0, 10) to allow all sources
-    }
+    const sources = buildSources({
+      decisionTools: decision.tools,
+      combinedDocs,
+      ragDocs,
+      perplexityDocs
+    })
 
     return {
       text: answer.content,
