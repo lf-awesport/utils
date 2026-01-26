@@ -188,13 +188,12 @@ async function chatbot({ userId }) {
       // Let's re-run merge or just map directly from what we have since we can't easily hoist the complex merge object
       // Actually, let's just create a quick source list
       const allDocs = [...ragDocs, ...perplexityDocs.map((p) => p.data)]
-      sources = allDocs
-        .map((d, i) => ({
-          url: d.url || "",
-          title: `[${i + 1}]`,
-          date: d.date || ""
-        }))
-        .slice(0, 10) // Limit sources
+      sources = allDocs.map((d, i) => ({
+        url: d.url || "",
+        title: `[${i + 1}]`,
+        date: d.date || ""
+      }))
+      // REMOVED .slice(0, 10) to allow all sources
     }
 
     return {

@@ -2,6 +2,8 @@
 
 /src/db.json
 
+update.http
+
 # dependencies
 /node_modules
 /.pnp
