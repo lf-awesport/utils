@@ -211,22 +211,14 @@ async function chatbot({ userId }) {
       backgroundTasks.push(dbSavePromise)
     }
 
-    // 3. Execute all tasks with a shared strict timeout (1s)
-    if (backgroundTasks.length > 0) {
-      try {
-        await Promise.race([
-          Promise.all(backgroundTasks),
-          new Promise((_, reject) =>
-            setTimeout(
-              () => reject(new Error("Background tasks timed out")),
-              1000
-            )
-          )
-        ])
-      } catch (err) {
-        console.error("Background path skipped/timed out:", err)
-      }
-    }
+    // 3. DO NOT AWAIT HERE. Return the promise to the controller.
+    // We group them into one promise to be handled by the caller.
+    const savePromise = Promise.allSettled(backgroundTasks).then((results) => {
+        results.forEach((res, i) => {
+            if(res.status === 'rejected') console.error(`Background task ${i} failed:`, res.reason)
+        })
+    })
+
     // ----------------------------------------
     // Includi anche le fonti (mergeResult.merged) in formato flat per il front-end
     let sources = []
@@ -246,7 +238,8 @@ async function chatbot({ userId }) {
 
     return {
       text: answer.content,
-      sources
+      sources,
+      savePromise // Return this so the route handler can await it AFTER sending response
     }
   }
 }

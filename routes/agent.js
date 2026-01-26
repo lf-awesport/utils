@@ -23,17 +23,18 @@ router.post("/", agentLimiter, validateQuery, async (req, res, next) => {
     // Express res.json automaticall sets Content-Type
 
     const pipeline = await chatbot({ userId })
-    const result = await pipeline({ query })
+    // Destructure specifically to get savePromise
+    const { text, sources, savePromise } = await pipeline({ query })
 
-    if (
-      result &&
-      typeof result === "object" &&
-      "text" in result &&
-      "sources" in result
-    ) {
-      res.json(result)
-    } else {
-      res.json({ text: result })
+    // 1. Send response IMMEDIATELY to user
+    res.json({ text, sources })
+
+    // 2. Wait for background tasks to finish (serverless keep-alive)
+    // We swallow errors here because response is already sent
+    if (savePromise) {
+      await savePromise.catch((e) =>
+        console.error("Background save failed:", e)
+      )
     }
   } catch (error) {
     next(error)
