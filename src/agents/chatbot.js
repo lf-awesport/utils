@@ -28,11 +28,11 @@ const ensureZepSession = async (userId, threadId) => {
     // 1. Ensure User exists
     await zepClient.user
       .add({ userId, email: `${userId}@example.com`, name: userId })
-      .catch(() => {})
+      .catch((e) => console.error("Zep user creation failed:", e))
     // 2. Ensure Thread exists
-    await zepClient.thread.create({ threadId, userId }).catch(() => {})
+    await zepClient.thread.create({ threadId, userId }).catch((e) => console.error("Zep thread creation failed:", e))
   } catch (err) {
-    console.error("Zep initialization warning:", err.message)
+    console.error("Zep initialization warning:", err)
   }
 }
 
@@ -57,8 +57,14 @@ async function chatbot({ userId }) {
         await zepSetupPromise
         // Fetch Context and Messages
         const [contextRes, messagesRes] = await Promise.all([
-          zepClient.thread.getUserContext(threadId).catch((e) => null),
-          zepClient.thread.get(threadId, { limit: 10 }).catch((e) => null)
+          zepClient.thread.getUserContext(threadId).catch((e) => {
+            console.error("Zep getUserContext failed:", e)
+            return null
+          }),
+          zepClient.thread.get(threadId, { limit: 10 }).catch((e) => {
+            console.error("Zep get messages failed:", e)
+            return null
+          })
         ])
 
         if (messagesRes && messagesRes.messages) {
@@ -78,7 +84,7 @@ async function chatbot({ userId }) {
 
         fullHistory = chatLog + zepContextBlock
       } catch (error) {
-        console.error("Failed to fetch Zep data:", error.message)
+        console.error("Failed to fetch Zep data:", error)
       }
     }
 
@@ -156,7 +162,7 @@ async function chatbot({ userId }) {
             { role: "assistant", content: answer.content }
           ]
         })
-        .catch((err) => console.error("Failed to save to Zep:", err.message))
+        .catch((err) => console.error("Failed to save to Zep:", err))
     }
     // -------------------------
 
