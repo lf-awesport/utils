@@ -31,13 +31,13 @@ const ensureZepSession = async (userId, threadId) => {
       .catch((e) => {
         // Ignore 400 (User already exists)
         if (e.statusCode === 400) return
-        console.error("Zep user creation failed:", e)
+        console.error("Zep user creation failed:")
       })
     // 2. Ensure Thread exists
     await zepClient.thread.create({ threadId, userId }).catch((e) => {
       // Ignore 400 (Thread already exists)
       if (e.statusCode === 400) return
-      console.error("Zep thread creation failed:", e)
+      console.error("Zep thread creation failed:")
     })
   } catch (err) {
     console.error("Zep initialization warning:", err)
@@ -173,10 +173,26 @@ async function chatbot({ userId }) {
       outputSchema
     )
 
-    // --- ZEP MEMORY SAVING ---
+    // --- PARALLEL SAVING AND DOC PREP ---
+    // Prepare documents first as they are needed for both saving and source listing
+    const ragDocs = ragResult.docs || []
+    const perplexityDocs = (perplexityResult.results || [])
+      .map(normalizeArticle)
+      .map((a) => ({ data: a }))
+
+    const ragUrls = new Set(ragDocs.map((d) => d.url))
+    const newArticles = []
+    for (const article of perplexityDocs) {
+      if (article.data.url && !ragUrls.has(article.data.url)) {
+        newArticles.push(article.data)
+      }
+    }
+
+    const backgroundTasks = []
+
+    // 1. Queue Zep Save
     if (userId && threadId) {
-      // Fire and forget (don't await strictly if you want speed)
-      zepClient.thread
+      const zepSavePromise = zepClient.thread
         .addMessages(threadId, {
           messages: [
             { role: "user", content: query },
@@ -184,29 +200,34 @@ async function chatbot({ userId }) {
           ]
         })
         .catch((err) => console.error("Failed to save to Zep:", err))
+      backgroundTasks.push(zepSavePromise)
     }
-    // -------------------------
 
-    // Dopo la risposta, salva i nuovi articoli
-    const ragDocs = ragResult.docs || []
-    const perplexityDocs = (perplexityResult.results || [])
-      .map(normalizeArticle)
-      .map((a) => ({ data: a }))
-
-    const ragUrls = new Set(ragDocs.map((d) => d.url))
-    // Estrai gli articoli normalizzati da {data: ...}
-    const newArticles = []
-    for (const article of perplexityDocs) {
-      if (article.data.url && !ragUrls.has(article.data.url)) {
-        newArticles.push(article.data)
-      }
-    }
+    // 2. Queue Article Save
     if (newArticles.length > 0) {
-      // Fire-and-forget: salva in background senza bloccare la risposta
-      perplexityDbTool
+      const dbSavePromise = perplexityDbTool
         .execute({ articles: newArticles })
         .catch((err) => console.error("Background save error:", err))
+      backgroundTasks.push(dbSavePromise)
     }
+
+    // 3. Execute all tasks with a shared strict timeout (1s)
+    if (backgroundTasks.length > 0) {
+      try {
+        await Promise.race([
+          Promise.all(backgroundTasks),
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Background tasks timed out")),
+              1000
+            )
+          )
+        ])
+      } catch (err) {
+        console.error("Background path skipped/timed out:", err)
+      }
+    }
+    // ----------------------------------------
     // Includi anche le fonti (mergeResult.merged) in formato flat per il front-end
     let sources = []
     if (decision.tools.length > 0) {
