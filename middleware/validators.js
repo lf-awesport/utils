@@ -1,7 +1,7 @@
 const { AppError } = require("../src/errors")
 
 const config = {
-  maxQueryLength: 500
+  maxQueryLength: 1000
 }
 
 const validateQuery = (req, res, next) => {
