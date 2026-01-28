@@ -11,9 +11,14 @@ const externalRAGTool = tool({
       .describe("La domanda o il tema da cercare nei documenti esterni")
   }),
   execute: async ({ query }) => {
-    const docs = await searchAndRerank(query)
-    const context = createContext(docs)
-    return { context, docs }
+    try {
+      const docs = await searchAndRerank(query)
+      const context = createContext(docs)
+      return { context, docs }
+    } catch (error) {
+      console.error("RAG tool error:", error.message)
+      return { context: "", docs: [] }
+    }
   }
 })
 

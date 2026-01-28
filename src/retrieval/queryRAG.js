@@ -248,6 +248,8 @@ async function searchSimilarDocuments({
 async function searchAndRerank(query, filters = []) {
   validateQuery(query)
 
+  const t0 = Date.now()
+
   const candidateResults = await searchSimilarDocuments({
     query,
     collectionName: "sentiment",
@@ -255,6 +257,8 @@ async function searchAndRerank(query, filters = []) {
     limit: DEFAULT_CONFIG.limit,
     filters
   })
+
+  const t1 = Date.now()
 
   const rerankRecords = candidateResults
     .filter((doc) => doc.data.rerank_summary || doc.data.excerpt)
@@ -265,6 +269,7 @@ async function searchAndRerank(query, filters = []) {
     }))
 
   const rankedResults = await rerankDocuments(query, rerankRecords)
+  const t2 = Date.now()
   const candidateMap = new Map(candidateResults.map((doc) => [doc.id, doc]))
   const finalRankedDocs = rankedResults
     .map((rankedDoc) => {
@@ -278,6 +283,18 @@ async function searchAndRerank(query, filters = []) {
     .filter((doc) => doc !== null)
     .filter((doc) => doc.data.rerank_score > 0.149)
     .slice(0, 10)
+
+  const t3 = Date.now()
+  console.log("RAG timings:", {
+    candidateCount: candidateResults.length,
+    rerankCandidates: rerankRecords.length,
+    rankedCount: rankedResults.length,
+    finalCount: finalRankedDocs.length,
+    embeddingAndVectorMs: t1 - t0,
+    rerankMs: t2 - t1,
+    filterMs: t3 - t2,
+    totalMs: t3 - t0
+  })
 
   return finalRankedDocs
 }

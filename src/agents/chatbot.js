@@ -62,22 +62,41 @@ const fetchZepMemoryWithTimeout = async ({
 }
 
 const runTools = async ({ query, useRag, usePerp }) => {
-  const promises = []
-  promises.push(
-    useRag ? externalRAGTool.execute({ query }) : Promise.resolve({ docs: [] })
-  )
-  promises.push(
+  // Always include RAG when Perplexity is used to keep sources complete
+  const effectiveUseRag = useRag || usePerp
+
+  const tasks = [
+    effectiveUseRag
+      ? externalRAGTool.execute({ query })
+      : Promise.resolve({ docs: [] }),
     usePerp
       ? perplexitySearchTool.execute({ query })
       : Promise.resolve({ results: [] })
-  )
+  ]
 
-  const [ragResult, perplexityResult] = await Promise.all(promises)
+  const [ragRes, perpRes] = await Promise.allSettled(tasks)
+
+  const ragResult =
+    ragRes.status === "fulfilled" ? ragRes.value : { docs: [] }
+  const perplexityResult =
+    perpRes.status === "fulfilled" ? perpRes.value : { results: [] }
+
+  if (ragRes.status === "rejected") {
+    console.error("RAG failed:", ragRes.reason?.message || ragRes.reason)
+  }
+  if (perpRes.status === "rejected") {
+    console.error("Perplexity failed:", perpRes.reason?.message || perpRes.reason)
+  }
 
   const ragDocs = ragResult.docs || []
   const perplexityDocs = (perplexityResult.results || [])
     .map(normalizeArticle)
     .map((a) => ({ data: a }))
+
+  console.log("Tool results:", {
+    ragCount: ragDocs.length,
+    perplexityCount: perplexityDocs.length
+  })
 
   const ragUrls = new Set(ragDocs.map((d) => d.url))
   const filteredPerpDocs = perplexityDocs.filter(
