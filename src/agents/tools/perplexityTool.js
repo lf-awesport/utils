@@ -71,9 +71,16 @@ const perplexitySearchTool = tool({
     Object.keys(sdkParams).forEach(
       (key) => sdkParams[key] === undefined && delete sdkParams[key]
     )
-    const search = await client.search.create(sdkParams)
-    const numResults = Array.isArray(search.results) ? search.results.length : 0
-    return search
+    try {
+      const search = await client.search.create(sdkParams)
+      const numResults = Array.isArray(search.results) ? search.results.length : 0
+      return search
+    } catch (error) {
+      const status = error?.status || error?.statusCode
+      const message = error?.message || "Unknown Perplexity error"
+      console.error("Perplexity search error", { status, message })
+      throw error
+    }
   }
 })
 

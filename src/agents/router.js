@@ -25,7 +25,7 @@ CRITERI DI DECISIONE:
    - Domande di logica pura o chiacchiere che non richiedono dati esterni.
    - **DOMANDE PERSONALI o SULLA MEMORIA**: Se l'utente chiede "Come mi chiamo?", "Cosa ti ho detto prima?", "Cosa sai di me?", "Chi sono?", "Riassumi la nostra chat", NON usare tools. La memoria della chat è già inclusa nel contesto base.
 
-2. USA TOOLS (["rag", "perplexity"]):
+2. USA TOOLS (["rag"]):
    - Domande fattuali su eventi, persone, aziende, partite.
    - Richieste di dati, statistiche, analisi di mercato.
    - Domande che richiedono conoscenza aggiornata o specifica ("Chi ha vinto ieri?", "Analisi bilancio Inter").
