@@ -649,7 +649,7 @@ class NSSScraper extends BaseScraper {
   }
 
   async scrapeArchive() {
-    for (let pageNum = 1; pageNum <= 5; pageNum++) {
+    for (let pageNum = 1; pageNum <= 2; pageNum++) {
       const page = await this.createPage()
       try {
         const url = `https://www.nss-sports.com/it/articles/page-${pageNum}`
@@ -967,7 +967,7 @@ module.exports = {
   CFScraper,
   RUScraper,
   DSScraper,
-  NSSScraper,
+  // NSSScraper,
   SportFairScraper,
   createPromiseProducer
 }
