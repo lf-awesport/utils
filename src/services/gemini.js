@@ -96,7 +96,8 @@ function createGeminiModel(headers = {}) {
       temperature: 0,
       topP: 0,
       topK: 1,
-      safetySettings: DEFAULT_SAFETY_SETTINGS
+      safetySettings: DEFAULT_SAFETY_SETTINGS,
+      thinkingConfig: { thinkingBudget: 0 }
     })
   } catch (error) {
     throw new GeminiError("Failed to initialize Gemini model", error)

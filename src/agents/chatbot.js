@@ -24,7 +24,7 @@ const outputSchema = z.object({
   content: z.string()
 })
 
-const ZEP_TIMEOUT_MS = 2000
+const ZEP_TIMEOUT_MS = 5000
 const ZEP_MESSAGES_LIMIT = 10
 
 const withTimeout = (promise, ms, message) =>
@@ -54,9 +54,7 @@ const fetchZepMemoryWithTimeout = async ({
       ZEP_TIMEOUT_MS,
       `Zep retrieval timed out (${ZEP_TIMEOUT_MS}ms)`
     )
-  } catch (error) {
-    console.error("Failed to fetch Zep data (or timed out):", error)
-  }
+  } catch (error) {}
 
   return { chatLog: "", zepContextString: "" }
 }
@@ -76,27 +74,16 @@ const runTools = async ({ query, useRag, usePerp }) => {
 
   const [ragRes, perpRes] = await Promise.allSettled(tasks)
 
-  const ragResult =
-    ragRes.status === "fulfilled" ? ragRes.value : { docs: [] }
+  const ragResult = ragRes.status === "fulfilled" ? ragRes.value : { docs: [] }
   const perplexityResult =
     perpRes.status === "fulfilled" ? perpRes.value : { results: [] }
 
-  if (ragRes.status === "rejected") {
-    console.error("RAG failed:", ragRes.reason?.message || ragRes.reason)
-  }
-  if (perpRes.status === "rejected") {
-    console.error("Perplexity failed:", perpRes.reason?.message || perpRes.reason)
-  }
+  // swallow tool errors (handled by empty results)
 
   const ragDocs = ragResult.docs || []
   const perplexityDocs = (perplexityResult.results || [])
     .map(normalizeArticle)
     .map((a) => ({ data: a }))
-
-  console.log("Tool results:", {
-    ragCount: ragDocs.length,
-    perplexityCount: perplexityDocs.length
-  })
 
   const ragUrls = new Set(ragDocs.map((d) => d.url))
   const filteredPerpDocs = perplexityDocs.filter(
@@ -129,15 +116,12 @@ const buildSources = ({
   }))
 }
 
-const buildSavePromise = ({ userId, threadId, query, answerContent }) => {
+const buildSavePromise = ({ userId, threadId, query }) => {
   if (!userId || !threadId) return Promise.resolve()
 
   return zepClient.thread
     .addMessages(threadId, {
-      messages: [
-        { role: "user", content: query },
-        { role: "assistant", content: answerContent }
-      ]
+      messages: [{ role: "user", name: userId, content: query }]
     })
     .catch((err) => console.error("Failed to save to Zep:", err))
 }
@@ -209,7 +193,7 @@ async function chatbot({ userId }) {
     const textStream = await geminiStream(
       finalUserPrompt,
       finalSystemPrompt,
-      8192
+      32000
     )
     for await (const chunk of textStream) {
       answerContent += chunk
@@ -220,8 +204,7 @@ async function chatbot({ userId }) {
     const savePromise = buildSavePromise({
       userId,
       threadId,
-      query,
-      answerContent
+      query
     })
 
     // ----------------------------------------
