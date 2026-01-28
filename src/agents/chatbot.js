@@ -157,7 +157,7 @@ async function chatbot({ userId }) {
 
     // A. RAG MODE
     if (decision.tools.length > 0) {
-      const useRag = decision.tools.includes("rag")
+      const useRag = true
       const usePerp = true
       const toolsResult = await runTools({ query, useRag, usePerp })
       ragDocs = toolsResult.ragDocs
