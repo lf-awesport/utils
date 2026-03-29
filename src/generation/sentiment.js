@@ -233,6 +233,7 @@ async function processArticles() {
     const postsSnap = await firestore
       .collection("posts")
       .where("processed", "==", false)
+      .limit(1000)
       .get()
 
     const total = postsSnap.size
@@ -321,7 +322,7 @@ async function processDailyArticles(date) {
   postsSnap.forEach((doc) => {
     const data = doc.data()
     allPosts.push(data)
-    if (data.body) megaBody += `\n---\n${data.rerank_summary}`
+    if (data.body) megaBody += "\n---\n" + (data.rerank_summary || data.body)
     if (data.title) titles.push(data.title)
     if (data.author) authors.add(data.author)
     if (Array.isArray(data.tags)) data.tags.forEach((t) => tags.add(t))

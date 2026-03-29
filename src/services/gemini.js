@@ -1,5 +1,5 @@
 const { createVertex } = require("@ai-sdk/google-vertex")
-const { generateObject, streamText } = require("ai")
+const { generateObject, streamText, generateText } = require("ai")
 const { config, requireEnv } = require("../config")
 
 /**
@@ -85,7 +85,7 @@ function createGeminiModel(headers = {}) {
       googleAuthOptions: {
         credentials: {
           client_email: config.clientEmail,
-          private_key: config.privateKey
+          private_key: config.privateKey?.replace(/\\n/g, "\n")
         }
       },
       headers
@@ -146,6 +146,32 @@ async function gemini(content, prompt, maxTokens, schema) {
 }
 
 /**
+ * Generates plain text output using the Gemini model
+ * @param {string} content - The input content to process
+ * @param {string} prompt - The system prompt to guide the generation
+ * @param {number} maxTokens - Maximum number of tokens to generate
+ * @returns {Promise<string>} - Generated text
+ */
+async function geminiText(content, prompt, maxTokens) {
+  validateStreamInput(content, prompt, maxTokens)
+  try {
+    const generativeModel = createGeminiModel()
+    const { text } = await generateText({
+      model: generativeModel,
+      system: prompt.trim(),
+      prompt: content.trim(),
+      maxTokens
+    })
+    return text
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw error
+    }
+    throw new GeminiError("Failed to generate text response", error)
+  }
+}
+
+/**
  * Streams text output using the Gemini model
  * @param {string} content - The input content to process
  * @param {string} prompt - The system prompt to guide the generation
@@ -178,6 +204,7 @@ async function geminiStream(content, prompt, maxTokens) {
 
 module.exports = {
   gemini,
+  geminiText,
   geminiStream,
   GeminiError,
   DEFAULT_SAFETY_SETTINGS,

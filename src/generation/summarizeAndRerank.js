@@ -3,8 +3,7 @@
 // usando Gemini e aggiornando Firestore con paginazione basata sul cursore.
 
 const { firestore } = require("../services/firebase")
-const { gemini } = require("../services/gemini")
-const { z } = require("zod")
+const { gemini, geminiText } = require("../services/gemini")
 
 // --- CONFIGURAZIONE E COSTANTI ---
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -46,8 +45,8 @@ async function summarizeSingleArticle(data) {
     return null
 
   try {
-    // Chiamata a Gemini per un output in plain text (z.string())
-    const summary = await gemini(articleForGemini, PROMPT, 1024, z.string())
+    // Chiamata a Gemini per un output in plain text
+    const summary = await geminiText(articleForGemini, PROMPT, 1024)
     return summary
   } catch (err) {
     return null
@@ -111,11 +110,10 @@ async function generateDailyNarrativeReport(articlesData) {
 
   try {
     // Chiamata a Gemini: aumentiamo il max_tokens per permettere un articolo completo
-    const report = await gemini(
+    const report = await geminiText(
       inputContext,
       DAILY_REPORT_PROMPT,
-      1500,
-      z.string()
+      1500
     )
 
     // Pulizia finale: rimuoviamo eventuali residui di formattazione markdown

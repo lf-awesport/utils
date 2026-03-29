@@ -17,7 +17,7 @@ const externalRAGTool = tool({
       return { context, docs }
     } catch (error) {
       console.error("RAG tool error:", error.message)
-      return { context: "", docs: [] }
+      return { context: `Si è verificato un errore durante la ricerca: ${error.message}`, docs: [] }
     }
   }
 })

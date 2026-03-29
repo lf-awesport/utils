@@ -54,6 +54,9 @@ function validateSearchOptions(options) {
   if (typeof query !== "string" || query.trim().length === 0) {
     throw new TypeError("query must be a non-empty string")
   }
+  if (query.length > 2000) {
+    throw new TypeError("Query exceeds maximum length of 2000 characters")
+  }
 
   if (
     vectorField !== undefined &&
@@ -95,6 +98,9 @@ function validateSearchOptions(options) {
 function validateQuery(query) {
   if (typeof query !== "string" || query.trim().length === 0) {
     throw new TypeError("Query must be a non-empty string")
+  }
+  if (query.length > 2000) {
+    throw new TypeError("Query exceeds maximum length of 2000 characters")
   }
 }
 

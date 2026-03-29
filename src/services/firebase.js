@@ -38,7 +38,7 @@ function createFirestoreClient() {
         // Firebase Admin SDK Administrator Service Agent
         // Service Account Token Creator
         client_email: config.firebase.clientEmail,
-        private_key: config.firebase.privateKey
+        private_key: config.firebase.privateKey?.replace(/\\n/g, "\n")
       }
     })
   } catch (error) {

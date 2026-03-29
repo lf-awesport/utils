@@ -143,12 +143,7 @@ Please extract the following fields to improve search, filtering, and generation
 
 module.exports.sentimentAnalysisSystemPrompt = sentimentAnalysisSystemPrompt
 
-const chatbotContextPrompt = (
-  query,
-  articleContext,
-  currentDate,
-  history
-) => `
+const chatbotContextPrompt = (query, articleContext, currentDate, history) => `
       ## 📜 CRONOLOGIA CHAT
       ${history || "Inizio della conversazione."}
 
@@ -224,11 +219,7 @@ Sei AWE Eddy, Mentore esperto di sport business e Tutor Digitale di Awe Sport Ed
 Scrivi sempre in italiano.
 `
 
-const conversationalContextPrompt = (
-  query,
-  currentDate,
-  history
-) => `
+const conversationalContextPrompt = (query, currentDate, history) => `
       ## 📜 CRONOLOGIA
       ${history || "Nessuna cronologia recente."}
 

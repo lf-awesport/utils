@@ -37,9 +37,11 @@ const buildSources = ({ decisionTools, ragDocs }) => {
   }))
 }
 
-async function chatbot({ query, onToken }) {
-  // We assume history is not passed for now, to be integrated seamlessly if needed.
-  let chatLog = ""
+async function chatbot({ query, history = [], onToken }) {
+  // Map history array objects {role, content} to a readable string format
+  const chatLog = Array.isArray(history) 
+    ? history.map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`).join('\\n')
+    : ""
 
   // --- PHASE 1: ROUTER DECISION ---
   const decision = await toolRouter({ query, history: chatLog })
@@ -55,22 +57,13 @@ async function chatbot({ query, onToken }) {
     const toolsResult = await runTools({ query })
     ragDocs = toolsResult.ragDocs
     const context = toolsResult.context
-    
+
     finalSystemPrompt = chatbotSystemPrompt
-    finalUserPrompt = chatbotContextPrompt(
-      query,
-      context,
-      currentDate,
-      chatLog
-    )
+    finalUserPrompt = chatbotContextPrompt(query, context, currentDate, chatLog)
   }
   // B. CONVERSATIONAL MODE
   else {
-    finalUserPrompt = conversationalContextPrompt(
-      query,
-      currentDate,
-      chatLog
-    )
+    finalUserPrompt = conversationalContextPrompt(query, currentDate, chatLog)
   }
 
   // --- PHASE 3: STREAMING RESPONSE ---
