@@ -3,7 +3,7 @@ const z = require("zod")
 
 const routerSchema = z.object({
   tools: z
-    .array(z.enum(["rag", "perplexity"]))
+    .array(z.enum(["rag"]))
     .describe("List of tools to execute. Empty if none needed."),
   reasoning: z.string().describe("Brief explanation of the decision")
 })
@@ -14,7 +14,6 @@ Analizza la richiesta dell'utente e la cronologia recente per decidere se servon
 
 STRUMENTI DISPONIBILI:
 - "rag": Per cercare nel database interno (documenti caricati, knowledge base aziendale).
-- "perplexity": Per cercare sul web notizie recenti, dati finanziari in tempo reale o eventi correnti.
 
 CRITERI DI DECISIONE:
 1. NO TOOLS ([]):
@@ -46,7 +45,7 @@ Recent History Summary: ${history || "None"}
   } catch (error) {
     console.error("Router error, defaulting to all tools:", error)
     // Fallback: se il router fallisce, cerchiamo per sicurezza
-    return { tools: ["rag", "perplexity"], reasoning: "Error fallback" }
+    return { tools: ["rag"], reasoning: "Error fallback" }
   }
 }
 

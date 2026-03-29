@@ -21,8 +21,7 @@ router.post("/stream", agentLimiter, validateQuery, async (req, res) => {
   req.on("close", onClose)
 
   try {
-    const userId = req.body.userId
-    const query = req.body.q
+    const query = req.body.q || req.body.query
 
     res.setHeader("Content-Type", "text/event-stream")
     res.setHeader("Cache-Control", "no-cache")
@@ -45,8 +44,7 @@ router.post("/stream", agentLimiter, validateQuery, async (req, res) => {
       }
     }
 
-    const pipeline = await chatbot({ userId })
-    const result = await pipeline({
+    const result = await chatbot({
       query,
       onToken: (token) => {
         safeWrite(`data: ${JSON.stringify({ text: token })}\n\n`)

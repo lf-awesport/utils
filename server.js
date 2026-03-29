@@ -5,7 +5,6 @@ require("dotenv").config({ path: require("find-config")(".env") })
 const errorHandler = require("./middleware/errorHandler.js")
 const agentRouter = require("./routes/agent.js")
 const searchRouter = require("./routes/search.js")
-const usersRouter = require("./routes/users.js")
 const adminRouter = require("./routes/admin.js")
 
 // Configuration
@@ -26,7 +25,6 @@ app.use(express.json())
 // Routes
 app.use("/askAgent", agentRouter)
 app.use("/search", searchRouter)
-app.use("/users", usersRouter)
 app.use("/", adminRouter) // Contains /update
 
 app.get("/test", (req, res) => {

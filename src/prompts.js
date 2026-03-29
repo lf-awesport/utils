@@ -147,14 +147,8 @@ const chatbotContextPrompt = (
   query,
   articleContext,
   currentDate,
-  history,
-  zepContext
+  history
 ) => `
-      ## 🧠 CONTESTO UTENTE (Memoria a Lungo Termine)
-      ${zepContext || "Nessuna informazione memorizzata."}
-      
-      ---
-
       ## 📜 CRONOLOGIA CHAT
       ${history || "Inizio della conversazione."}
 
@@ -233,14 +227,8 @@ Scrivi sempre in italiano.
 const conversationalContextPrompt = (
   query,
   currentDate,
-  history,
-  zepContext
+  history
 ) => `
-      ## 🧠 MEMORIA (Fatti sull'utente)
-      ${zepContext || "Nessun background noto."}
-
-      ---
-
       ## 📜 CRONOLOGIA
       ${history || "Nessuna cronologia recente."}
 
