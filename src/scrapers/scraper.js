@@ -901,7 +901,7 @@ async function runAllScrapers() {
       new CFScraper(browser),
       new DSScraper(browser),
       new RUScraper(browser),
-      new NSSScraper(browser),
+      // new NSSScraper(browser),
       new SportFairScraper(browser)
     ]
 
