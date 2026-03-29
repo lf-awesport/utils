@@ -22,7 +22,10 @@ const config = {
     privateKey: process.env.FB_PRIVATE_KEY
   },
   updateSecret: process.env.UPDATE_SECRET,
-  googleGenerativeAiApiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  googleGenerativeAiApiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+  validation: {
+    maxQueryLength: 2000
+  }
 }
 
 const requireEnv = (keys, errorFactory = (msg) => new Error(msg)) => {

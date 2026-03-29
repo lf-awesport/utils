@@ -4,15 +4,14 @@ const { validateQuery } = require("../middleware/validators.js")
 
 const router = express.Router()
 
+const formatDate = (y, m, d) => {
+  if (!y || !m || !d) return null
+  return `${y.toString().padStart(4, "0")}-${m.toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`
+}
+
 router.post("/", validateQuery, async (req, res, next) => {
   try {
-    const { query, fromYear, fromMonth, fromDay, toYear, toMonth, toDay } =
-      req.body
-
-    function formatDate(y, m, d) {
-      if (!y || !m || !d) return null
-      return `${y.toString().padStart(4, "0")}-${m.toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`
-    }
+    const { query, fromYear, fromMonth, fromDay, toYear, toMonth, toDay } = req.body
 
     const filters = []
     const fromDate = formatDate(fromYear, fromMonth, fromDay)

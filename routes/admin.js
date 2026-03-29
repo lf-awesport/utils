@@ -14,20 +14,15 @@ router.get("/update", validateUpdateSecret, async (req, res, next) => {
     await runAllScrapers()
     await processArticles()
 
-    // Calcola le date: dall'ultimo mese fino a due giorni fa
     const today = new Date()
     const results = []
 
     for (let i = 30; i >= 2; i--) {
       const d = new Date(today)
       d.setDate(today.getDate() - i)
-      const dateString = d.toISOString().slice(0, 10)
+      const dateString = d.toISOString().split('T')[0]
 
-      // Salta se già presente in daily
-      const dailyDoc = await firestore
-        .collection("daily")
-        .doc(`daily-${dateString}`)
-        .get()
+      const dailyDoc = await firestore.collection("daily").doc(`daily-${dateString}`).get()
       if (dailyDoc.exists) {
         results.push(`${dateString}: SKIPPED (already exists)`)
         continue
@@ -40,7 +35,7 @@ router.get("/update", validateUpdateSecret, async (req, res, next) => {
         results.push(`${dateString}: ERROR - ${err.message}`)
       }
     }
-    res.status(200).send(`✅ Update complete!\n` + results.join("\n"))
+    res.status(200).send(`✅ Update complete!\n${results.join("\n")}`)
   } catch (error) {
     next(error)
   }

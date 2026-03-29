@@ -21,7 +21,7 @@ router.post("/stream", agentLimiter, validateQuery, async (req, res) => {
   req.on("close", onClose)
 
   try {
-    const query = req.body.q || req.body.query
+    const { query } = req.body
 
     res.setHeader("Content-Type", "text/event-stream")
     res.setHeader("Cache-Control", "no-cache")
@@ -32,40 +32,32 @@ router.post("/stream", agentLimiter, validateQuery, async (req, res) => {
     res.write("retry: 3000\n\n")
 
     const ping = setInterval(() => {
-      if (closed) return
+      if (closed) {
+        clearInterval(ping)
+        return
+      }
       res.write("event: ping\ndata: {}\n\n")
     }, 15000)
 
     const safeWrite = (payload) => {
       if (closed) return
       const ok = res.write(payload)
-      if (!ok) {
-        res.once("drain", () => {})
-      }
+      if (!ok) res.once("drain", () => {})
     }
 
     const result = await chatbot({
       query,
-      onToken: (token) => {
-        safeWrite(`data: ${JSON.stringify({ text: token })}\n\n`)
-      }
+      onToken: (token) => safeWrite(`data: ${JSON.stringify({ text: token })}\n\n`)
     })
 
     if (result && !closed) {
-      safeWrite(
-        `data: ${JSON.stringify({
-          text: result.text,
-          sources: result.sources || [],
-          overwrite: true
-        })}\n\n`
-      )
+      safeWrite(`data: ${JSON.stringify({ text: result.text, sources: result.sources || [], overwrite: true })}\n\n`)
     }
 
     if (!closed) {
       safeWrite("event: end\ndata: {}\n\n")
       res.end()
     }
-    clearInterval(ping)
   } catch (error) {
     if (!closed) {
       res.write("event: error\n")
