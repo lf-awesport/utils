@@ -26,14 +26,15 @@ const DEFAULT_CONFIG = {
   }
 }
 
+const { AppError } = require("../errors")
+
 /**
  * Custom error class for sentiment analysis related errors
  */
-class SentimentError extends Error {
+class SentimentError extends AppError {
   constructor(message, originalError = null) {
-    super(message)
+    super(message, { status: 500, code: "GENERATION_ERROR", details: originalError })
     this.name = "SentimentError"
-    this.originalError = originalError
   }
 }
 
@@ -115,14 +116,6 @@ const SENTIMENT_SCHEMA = jsonSchema({
     "entita_rilevanti"
   ]
 })
-
-/**
- * Creates a rate-limited HTTP client
- * @returns {import('axios').AxiosInstance} Rate-limited Axios instance
- */
-function createHttpClient() {
-  return rateLimit(axios.create(), DEFAULT_CONFIG.rateLimit)
-}
 
 /**
  * Generates the full text content for embedding
@@ -226,9 +219,6 @@ async function processArticle(post, mode = "single") {
  */
 async function processArticles() {
   try {
-    // Create HTTP client
-    createHttpClient()
-
     // Get unprocessed posts
     const postsSnap = await firestore
       .collection("posts")

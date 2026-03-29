@@ -13,14 +13,15 @@ const DEFAULT_CONFIG = {
   limit: 20
 }
 
+const { AppError } = require("../errors")
+
 /**
  * Classe di errore personalizzata per la gestione degli errori RAG.
  */
-class RAGError extends Error {
+class RAGError extends AppError {
   constructor(message, originalError = null) {
-    super(message)
+    super(message, { status: 500, code: "RAG_ERROR", details: originalError })
     this.name = "RAGError"
-    this.originalError = originalError
   }
 }
 

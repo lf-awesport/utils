@@ -13,13 +13,13 @@ const config = {
   model: process.env.MODEL,
   embeddingModel: process.env.EMBEDDING_MODEL,
   clientEmail: process.env.CLIENT_EMAIL,
-  privateKey: process.env.PRIVATE_KEY,
+  privateKey: process.env.PRIVATE_KEY?.replace(/\\n/g, "\n"),
   googleCredentialsJson: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON,
   zepApiKey: process.env.ZEP_API_KEY,
   firebase: {
     projectId: process.env.FB_PROJECT_ID,
     clientEmail: process.env.FB_CLIENT_EMAIL,
-    privateKey: process.env.FB_PRIVATE_KEY
+    privateKey: process.env.FB_PRIVATE_KEY?.replace(/\\n/g, "\n")
   },
   updateSecret: process.env.UPDATE_SECRET,
   googleGenerativeAiApiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,

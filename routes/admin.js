@@ -20,9 +20,12 @@ router.get("/update", validateUpdateSecret, async (req, res, next) => {
     for (let i = 30; i >= 2; i--) {
       const d = new Date(today)
       d.setDate(today.getDate() - i)
-      const dateString = d.toISOString().split('T')[0]
+      const dateString = d.toISOString().split("T")[0]
 
-      const dailyDoc = await firestore.collection("daily").doc(`daily-${dateString}`).get()
+      const dailyDoc = await firestore
+        .collection("daily")
+        .doc(`daily-${dateString}`)
+        .get()
       if (dailyDoc.exists) {
         results.push(`${dateString}: SKIPPED (already exists)`)
         continue

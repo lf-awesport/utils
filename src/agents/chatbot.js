@@ -39,8 +39,13 @@ const buildSources = ({ decisionTools, ragDocs }) => {
 
 async function chatbot({ query, history = [], onToken }) {
   // Map history array objects {role, content} to a readable string format
-  const chatLog = Array.isArray(history) 
-    ? history.map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`).join('\\n')
+  const chatLog = Array.isArray(history)
+    ? history
+        .map(
+          (msg) =>
+            `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`
+        )
+        .join("\\n")
     : ""
 
   // --- PHASE 1: ROUTER DECISION ---

@@ -2,14 +2,15 @@ const { embed } = require("ai")
 const { createVertex } = require("@ai-sdk/google-vertex")
 const { config, requireEnv } = require("../config")
 
+const { AppError } = require("../errors")
+
 /**
  * Custom error class for embedding-related errors
  */
-class EmbeddingError extends Error {
+class EmbeddingError extends AppError {
   constructor(message, originalError = null) {
-    super(message)
+    super(message, { status: 502, code: "EXTERNAL_SERVICE_ERROR", details: originalError })
     this.name = "EmbeddingError"
-    this.originalError = originalError
   }
 }
 

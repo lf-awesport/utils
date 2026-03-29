@@ -11,10 +11,7 @@ const MODEL_NAME = "semantic-ranker-default@latest"
 
 // Variabili d'ambiente per la Service Account (chiavi separate)
 const CLIENT_EMAIL = config.clientEmail
-// La chiave privata è spesso quotata nel file .env; assicuriamoci che sia pulita
 const PRIVATE_KEY = config.privateKey
-  ? config.privateKey.replace(/\\n/g, "\n")
-  : null
 
 // Lo scope necessario per Discovery Engine/Vertex AI Search
 const SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
@@ -105,7 +102,9 @@ async function rerankDocuments(userQuery, documents) {
         error.message
       )
     }
-    const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message
+    const errorMessage = error.response
+      ? JSON.stringify(error.response.data)
+      : error.message
     throw new Error(`Reranking API call failed: ${errorMessage}`)
   }
 }

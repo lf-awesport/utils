@@ -1,14 +1,15 @@
 const { Firestore } = require("@google-cloud/firestore")
 const { config, requireEnv } = require("../config")
 
+const { AppError } = require("../errors")
+
 /**
  * Custom error class for Firebase-related errors
  */
-class FirebaseError extends Error {
+class FirebaseError extends AppError {
   constructor(message, originalError = null) {
-    super(message)
+    super(message, { status: 500, code: "DATABASE_ERROR", details: originalError })
     this.name = "FirebaseError"
-    this.originalError = originalError
   }
 }
 
@@ -38,7 +39,7 @@ function createFirestoreClient() {
         // Firebase Admin SDK Administrator Service Agent
         // Service Account Token Creator
         client_email: config.firebase.clientEmail,
-        private_key: config.firebase.privateKey?.replace(/\\n/g, "\n")
+        private_key: config.firebase.privateKey
       }
     })
   } catch (error) {

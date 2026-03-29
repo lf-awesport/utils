@@ -1,3 +1,4 @@
+const crypto = require("crypto")
 const { AppError } = require("../src/errors")
 const { config } = require("../src/config")
 
@@ -9,10 +10,22 @@ const validateUpdateSecret = (req, res, next) => {
     return next(AppError.internal("Server misconfiguration"))
   }
 
-  if (providedSecret !== config.updateSecret) {
-    return next(
-      AppError.unauthorized("Unauthorized: Invalid or missing secret")
-    )
+  if (!providedSecret) {
+    return next(AppError.unauthorized("Unauthorized: Missing secret"))
+  }
+
+  try {
+    const expectedBuffer = Buffer.from(config.updateSecret)
+    const providedBuffer = Buffer.from(providedSecret)
+
+    if (
+      expectedBuffer.length !== providedBuffer.length ||
+      !crypto.timingSafeEqual(expectedBuffer, providedBuffer)
+    ) {
+      return next(AppError.unauthorized("Unauthorized: Invalid secret"))
+    }
+  } catch (error) {
+    return next(AppError.unauthorized("Unauthorized: Invalid secret format"))
   }
 
   next()

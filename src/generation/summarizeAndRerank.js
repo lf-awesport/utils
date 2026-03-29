@@ -49,6 +49,7 @@ async function summarizeSingleArticle(data) {
     const summary = await geminiText(articleForGemini, PROMPT, 1024)
     return summary
   } catch (err) {
+    console.error(`Error summarizing article (ID: ${data.id || "unknown"}):`, err.message)
     return null
   }
 }
@@ -110,11 +111,7 @@ async function generateDailyNarrativeReport(articlesData) {
 
   try {
     // Chiamata a Gemini: aumentiamo il max_tokens per permettere un articolo completo
-    const report = await geminiText(
-      inputContext,
-      DAILY_REPORT_PROMPT,
-      1500
-    )
+    const report = await geminiText(inputContext, DAILY_REPORT_PROMPT, 1500)
 
     // Pulizia finale: rimuoviamo eventuali residui di formattazione markdown
     const cleanReport = report

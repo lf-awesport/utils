@@ -47,11 +47,14 @@ router.post("/stream", agentLimiter, validateQuery, async (req, res) => {
 
     const result = await chatbot({
       query,
-      onToken: (token) => safeWrite(`data: ${JSON.stringify({ text: token })}\n\n`)
+      onToken: (token) =>
+        safeWrite(`data: ${JSON.stringify({ text: token })}\n\n`)
     })
 
     if (result && !closed) {
-      safeWrite(`data: ${JSON.stringify({ text: result.text, sources: result.sources || [], overwrite: true })}\n\n`)
+      safeWrite(
+        `data: ${JSON.stringify({ text: result.text, sources: result.sources || [], overwrite: true })}\n\n`
+      )
     }
 
     if (!closed) {

@@ -11,7 +11,8 @@ const formatDate = (y, m, d) => {
 
 router.post("/", validateQuery, async (req, res, next) => {
   try {
-    const { query, fromYear, fromMonth, fromDay, toYear, toMonth, toDay } = req.body
+    const { query, fromYear, fromMonth, fromDay, toYear, toMonth, toDay } =
+      req.body
 
     const filters = []
     const fromDate = formatDate(fromYear, fromMonth, fromDay)

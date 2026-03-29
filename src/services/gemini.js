@@ -24,14 +24,15 @@ const DEFAULT_SAFETY_SETTINGS = [
   }
 ]
 
+const { AppError } = require("../errors")
+
 /**
  * Error class for Gemini API related errors
  */
-class GeminiError extends Error {
+class GeminiError extends AppError {
   constructor(message, originalError = null) {
-    super(message)
+    super(message, { status: 502, code: "EXTERNAL_SERVICE_ERROR", details: originalError })
     this.name = "GeminiError"
-    this.originalError = originalError
   }
 }
 
@@ -70,12 +71,18 @@ function validateStreamInput(content, prompt, maxTokens) {
   }
 }
 
+let cachedModel = null;
+
 /**
  * Creates and initializes the Gemini model
  * @returns {Object} Initialized Gemini model
  * @throws {GeminiError} If model initialization fails
  */
-function createGeminiModel(headers = {}) {
+function getGeminiModel(headers = {}) {
+  if (cachedModel && Object.keys(headers).length === 0) {
+    return cachedModel;
+  }
+
   requireEnv(["PROJECT_ID", "LOCATION", "MODEL"], (msg) => new GeminiError(msg))
 
   try {
@@ -85,13 +92,13 @@ function createGeminiModel(headers = {}) {
       googleAuthOptions: {
         credentials: {
           client_email: config.clientEmail,
-          private_key: config.privateKey?.replace(/\\n/g, "\n")
+          private_key: config.privateKey
         }
       },
       headers
     })
 
-    return vertex_ai(config.model, {
+    const model = vertex_ai(config.model, {
       structuredOutputs: true,
       temperature: 0,
       topP: 0,
@@ -99,6 +106,12 @@ function createGeminiModel(headers = {}) {
       safetySettings: DEFAULT_SAFETY_SETTINGS,
       thinkingConfig: { thinkingBudget: 0 }
     })
+
+    if (Object.keys(headers).length === 0) {
+      cachedModel = model;
+    }
+    
+    return model;
   } catch (error) {
     throw new GeminiError("Failed to initialize Gemini model", error)
   }
@@ -117,9 +130,7 @@ function createGeminiModel(headers = {}) {
 async function gemini(content, prompt, maxTokens, schema) {
   validateInput(content, prompt, maxTokens, schema)
   try {
-    // Initialize the Gemini model
-    let generativeModel
-    generativeModel = createGeminiModel()
+    const generativeModel = getGeminiModel()
 
     const { object } = await generateObject({
       model: generativeModel,
@@ -135,12 +146,8 @@ async function gemini(content, prompt, maxTokens, schema) {
 
     return object
   } catch (error) {
-    if (error instanceof TypeError) {
-      throw error
-    }
-    if (error instanceof GeminiError) {
-      throw error
-    }
+    if (error instanceof TypeError) throw error
+    if (error instanceof GeminiError) throw error
     throw new GeminiError("Failed to generate response", error)
   }
 }
@@ -155,7 +162,7 @@ async function gemini(content, prompt, maxTokens, schema) {
 async function geminiText(content, prompt, maxTokens) {
   validateStreamInput(content, prompt, maxTokens)
   try {
-    const generativeModel = createGeminiModel()
+    const generativeModel = getGeminiModel()
     const { text } = await generateText({
       model: generativeModel,
       system: prompt.trim(),
@@ -164,9 +171,7 @@ async function geminiText(content, prompt, maxTokens) {
     })
     return text
   } catch (error) {
-    if (error instanceof TypeError) {
-      throw error
-    }
+    if (error instanceof TypeError) throw error
     throw new GeminiError("Failed to generate text response", error)
   }
 }
@@ -183,7 +188,7 @@ async function geminiText(content, prompt, maxTokens) {
 async function geminiStream(content, prompt, maxTokens) {
   validateStreamInput(content, prompt, maxTokens)
   try {
-    const generativeModel = createGeminiModel()
+    const generativeModel = getGeminiModel()
     const { textStream } = await streamText({
       model: generativeModel,
       system: prompt.trim(),
@@ -192,12 +197,8 @@ async function geminiStream(content, prompt, maxTokens) {
     })
     return textStream
   } catch (error) {
-    if (error instanceof TypeError) {
-      throw error
-    }
-    if (error instanceof GeminiError) {
-      throw error
-    }
+    if (error instanceof TypeError) throw error
+    if (error instanceof GeminiError) throw error
     throw new GeminiError("Failed to stream response", error)
   }
 }
@@ -208,5 +209,5 @@ module.exports = {
   geminiStream,
   GeminiError,
   DEFAULT_SAFETY_SETTINGS,
-  createGeminiModel
+  getGeminiModel
 }
