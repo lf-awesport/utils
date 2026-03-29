@@ -1,238 +1,177 @@
 /**
  * @fileoverview Lesson Generation Tools
- * Contains AI instructions orchestrating educational layout schema formatting matching specific Zod targets.
+ * Contains AI instructions orchestrating a single daily micro-learning press review module.
  * @module lessonGen
  */
 const { firestore } = require("../services/firebase")
 const { z } = require("zod")
 const { gemini } = require("../services/gemini")
-const { searchSimilarDocuments } = require("../retrieval/queryRAG")
 
-const levelZod = z.object({
-  levelTitle: z.string(),
-  cards: z.array(
+const clusterZod = z.object({
+  topics: z.array(
     z.object({
-      title: z.string(),
-      content: z.string(),
-      quiz: z.object({
-        question: z.string(),
-        options: z.array(z.string()).min(3).max(3),
-        correctAnswer: z.string()
-      })
+      topicTitle: z.string().describe("Il titolo del macro-argomento di Sport Business"),
+      articleIndices: z.array(z.number()).describe("Gli indici degli articoli pertinenti a questo argomento")
     })
   )
 })
 
-const reviewSchema = z.object({
-  essay: z.object({
-    title: z.string(),
-    essay: z.string()
-  }),
-  easy: levelZod,
-  medium: levelZod,
-  hard: levelZod
-})
-const essayZod = z.object({
+const cardZod = z.object({
   title: z.string(),
-  essay: z.string()
+  content: z.string(),
+  quiz: z.object({
+    question: z.string(),
+    options: z.array(z.string()).min(3).max(3),
+    correctAnswer: z.string()
+  })
 })
 
-const levelInstructions = {
-  easy: `
-📘 **Livello EASY – Introduzione ai concetti base**
-- Definisci i termini fondamentali e le nozioni chiave della materia.
-- Usa esempi semplici e concreti per facilitare la comprensione.
-- NON introdurre normative complesse, tecnicismi o casi avanzati.
-`,
+const clusterPrompt = (dateString, articlesSummary) => `
+Sei un caporedattore specializzato in SPORT BUSINESS. Analizzi le notizie della giornata.
+Oggi è il ${dateString}.
 
-  medium: `
-📗 **Livello MEDIUM – Applicazioni pratiche e riferimenti**
-- Approfondisci regolamenti, strumenti, modelli o casi reali rilevanti.
-- Spiega il funzionamento pratico dei concetti, con riferimenti concreti.
-- NON ripetere concetti già trattati nel livello EASY.
-`,
+### Il tuo compito:
+Raggruppa le notizie ricevute in macro-argomenti rilevanti per l'economia, finanza, diritti TV, marketing e infrastrutture dello sport.
+Se più articoli parlano dello stesso avvenimento o tema, raggruppali in un unico topic.
+❗ **IGNORA ASSOLUTAMENTE** le notizie di solo "sport giocato" (risultati, infortuni, pagelle, commenti tecnici puramente sportivi senza implicazioni economiche).
 
-  hard: `
-📕 **Livello HARD – Approccio critico e avanzato**
-- Analizza dilemmi, contraddizioni, interpretazioni avanzate o implicazioni strategiche.
-- Stimola la riflessione con domande aperte e prospettive interdisciplinari.
-- NON ripetere quanto già spiegato nei livelli precedenti.
-`
-}
+### Notizie di oggi:
+${articlesSummary}
 
-const essayPrompt = ({ topic, materia, contextString }) => `
-Sei un esperto di **${materia}**. Scrivi un breve saggio (max 400 parole) per aiutare uno studente universitario a comprendere il tema: **"${topic}"**, all'interno del corso di "${materia}".
-
-Utilizza un linguaggio accessibile, ma rigoroso e ben strutturato. Lo scopo è preparare lo studente ad affrontare il modulo didattico. Fai riferimento a fatti reali, strumenti, modelli, normative o principi fondamentali rilevanti, ma senza andare troppo nel dettaglio tecnico.
-
-### Contesto disponibile:
-${contextString}...
-
-FORMATTA TUTTO IN MARKDOWN SEMANTICO EVIDENZIANDO IN **GRASSETTO** o *CORSIVO* le parole chiave.
-
-❗ Rispondi con un oggetto JSON:
-{
-  "title": "Titolo del saggio",
-  "essay": "Testo del saggio"
-}
+### Requisiti output:
+Restituisci un oggetto JSON con un array 'topics'. Per ogni topic indica un 'topicTitle' chiaro e la lista 'articleIndices' con gli indici numerici esatti estratti dalle notizie fornite.
 `
 
-const promptTemplate = ({
-  level,
-  topic,
-  materia,
-  contextString,
-  essay,
-  previousOutput = null
-}) => {
-  const additionalContext = previousOutput
-    ? `### Output del livello precedente:\n${JSON.stringify(previousOutput)}\n`
-    : ""
+const cardPrompt = (topicTitle, contextString) => `
+Sei un esperto giornalista e analista, specializzato in SPORT BUSINESS e management sportivo.
+Devi scrivere una singola "Card" di micro-learning estremamente densa e verticale sul topic: **"${topicTitle}"**.
 
-  const introEssay = essay
-    ? `### Saggio introduttivo:\nTitolo: ${essay.title}\n${essay.essay}\n`
-    : ""
-
-  return `
-Sei un esperto di **${materia}** e docente universitario. Devi progettare un modulo didattico sul tema **"${topic}"**, per il corso di "${materia}".
-
-### Livello: ${level.toUpperCase()}
-${levelInstructions[level]}
-
-${additionalContext}
-
-### Contesto (fonti, articoli, riferimenti):
-${contextString}...
+### Contesto specifico:
+${contextString}
 
 ### Obiettivo:
-Aiuta gli studenti a comprendere concetti chiave della materia, in modo coerente con il livello di difficoltà.
+Scrivi una sintesi profonda (min 150, max 250 parole) che spieghi l'avvenimento, focalizzandosi in modo analitico su strategie, implicazioni di business, finanza o impatto sulle industry dello sport.
 
 ### Requisiti output:
 Restituisci un **oggetto JSON**:
-- levelTitle: titolo del livello
-- cards: 5 schede, ognuna con:
-  - title
-  - content (max 100 parole)
-  - quiz: 3 opzioni, 1 corretta
-### Stile:
-Professionale e accessibile. Linguaggio chiaro, rigoroso, adatto a studenti universitari.
-
-✅ Checklist prima di rispondere:
-- Ogni livello deve approfondire aspetti differenti.
-- Le card devono trattare temi complementari e non ridondanti.
-- Il livello HARD può criticare o problematizzare i contenuti dei precedenti.
-
-❗ Rispondi solo con l’oggetto JSON.
-`
-}
-
-const reviewPrompt = ({ topic, materia, fullDraft }) => `
-Sei un esperto di **${materia}** e instructional designer per moduli educativi.
-
-Hai ricevuto una bozza completa di un modulo didattico sul tema: **"${topic}"**, per il corso di "${materia}". La bozza è divisa in 3 livelli: EASY, MEDIUM, HARD e contiene un saggio introduttivo.
-
-### Il tuo compito:
-- Rivedi **interamente** il modulo.
-- Per ogni livello:
-  - Riformula il **levelTitle** per renderlo più **specifico e coerente** con i contenuti delle carte.
-  - Mescola **l’ordine delle risposte del quiz**.
-  - Mantieni solo 3 cards per livello, evitando ripetizioni di contenuti.
-  - Migliora lo stile e la chiarezza se necessario.
-- Rivedi anche il **saggio introduttivo**, assicurandoti che sia coerente, ben scritto e utile a comprendere il tema.
-- NON aggiungere nuovi contenuti, ma migliora la coerenza e varietà.
-- NON ripetere concetti già trattati in altri livelli.
-
-❗ Restituisci un oggetto JSON con:
-- essay
-- easy
-- medium
-- hard
-
-❗ Ogni oggetto deve avere la struttura prevista.
-
-### Bozza iniziale del modulo:
-${JSON.stringify(fullDraft)}
-
-❗ Rispondi SOLO con il JSON finale.
+- title: Titolo chiaro per focalizzare l'argomento.
+- content: L'analisi scritta in paragrafi ben divisi.
+- quiz: 1 domanda a risposta multipla per verificare la comprensione dei punti chiave.
+  - question: Domanda focalizzata sul business del testo appena scritto.
+  - options: Array essatto di 3 opzioni plausibili.
+  - correctAnswer: L'opzione esatta (deve essere identica a una delle options).
 `
 
-async function generateLearningModule({ topic, materia, lessonId }) {
+/**
+ * Generates a single Daily Press Review lesson from the day's articles.
+ * Multi-step RAG: Groups articles into topics, then generates one card per topic.
+ * 
+ * @async
+ * @param {string} dateString - Date to scan for raw imported articles format YYYY-MM-DD.
+ * @returns {Promise<Array>} List containing the single generated module description (or empty array).
+ */
+async function generateLessonsFromDailyTopics(dateString) {
   try {
-    const context = await searchSimilarDocuments({
-      query: topic,
-      collectionName: "sentiment",
-      distanceMeasure: "COSINE",
-      limit: 25
-    })
+    const materia = "Sport Management"
+    console.log("🔍 Ricerca articoli per la Daily Press Review del " + dateString + "...")
+    const postsSnap = await firestore
+      .collection("sentiment")
+      .where("date", "==", dateString)
+      .get()
 
-    const contextString = context
-      .map(({ data }) => data.analysis?.cleanText || "")
-      .join("\n---\n")
-    const imgLink = context.find((r) => r.data.imgLink)?.data?.imgLink || null
-
-    const essay = await gemini(
-      contextString,
-      essayPrompt({ topic, materia, contextString }),
-      4096,
-      essayZod
-    )
-
-    const easy = await gemini(
-      contextString,
-      promptTemplate({ level: "easy", topic, materia, contextString, essay }),
-      8192,
-      levelZod
-    )
-
-    const medium = await gemini(
-      contextString,
-      promptTemplate({
-        level: "medium",
-        topic,
-        materia,
-        contextString,
-        essay,
-        previousOutput: easy
-      }),
-      8192,
-      levelZod
-    )
-
-    const hard = await gemini(
-      contextString,
-      promptTemplate({
-        level: "hard",
-        topic,
-        materia,
-        contextString,
-        essay,
-        previousOutput: medium
-      }),
-      8192,
-      levelZod
-    )
-
-    const fullDraft = { easy, medium, hard, essay }
-
-    const reviewed = await gemini(
-      contextString,
-      reviewPrompt({ topic, materia, fullDraft }),
-      8192,
-      reviewSchema
-    )
-
-    if (!reviewed) {
-      console.error("❌ La revisione non ha restituito dati validi.")
-      return null
+    if (postsSnap.empty) {
+      console.log("Nessun post trovato per la data " + dateString)
+      return []
     }
 
+    const articles = []
+    let imgLink = null
+    postsSnap.forEach(doc => {
+      const data = doc.data()
+      articles.push(data)
+      if (!imgLink && data.imgLink) imgLink = data.imgLink
+    })
+
+    // 1. Costruiamo il riassunto breve delle notizie per il clustering
+    let summaryText = ""
+    articles.forEach((art, index) => {
+      // Usiamo una slice ancora più corta per limitare i token (evita "Failed to generate response")
+      const snippet = art.excerpt || (art.analysis?.cleanText ? art.analysis.cleanText.slice(0, 100) : "")
+      summaryText += "\n[" + index + "] Titolo: " + art.title + "\nEstratto: " + snippet + "...\n"
+    })
+
+    console.log("📘 Estraggo i topic da " + articles.length + " articoli...")
+    
+    const clusteringResult = await gemini(
+      "Raggruppa le notizie pertinenti in base al testo fornito nel prompt",
+      clusterPrompt(dateString, summaryText),
+      4096,
+      clusterZod
+    )
+
+    if (!clusteringResult || !clusteringResult.topics || clusteringResult.topics.length === 0) {
+      console.warn("❌ Nessun topic valido di business trovato nel clustering.")
+      return []
+    }
+
+    const validCards = []
+
+    // 2. Generazioni Card Independenti per ogni Topic (Chiamate più piccole ma iper precise)
+    for (const topic of clusteringResult.topics) {
+      if (!topic.articleIndices || topic.articleIndices.length === 0) continue
+
+      // Estrai il contesto lungo degli articoli pertinenti a QUESTO topic
+      let specificContext = ""
+      for (const idx of topic.articleIndices) {
+        if (articles[idx]) {
+          const contentText = articles[idx].analysis?.cleanText || articles[idx].excerpt
+          specificContext += "\n--- ARTICOLO FONTE ---\nTitolo: " + articles[idx].title + "\nTesto: " + contentText + "\n"
+        }
+      }
+
+      console.log("📝 Genero card per topic: '" + topic.topicTitle + "' (" + topic.articleIndices.length + " articoli fonte)...")
+      
+      try {
+        const cardResult = await gemini(
+          "Genera la card di approfondimento",
+          cardPrompt(topic.topicTitle, specificContext),
+          4096,
+          cardZod
+        )
+        if (cardResult && cardResult.title && cardResult.content) {
+          validCards.push(cardResult)
+        }
+      } catch (errCard) {
+        console.error("Errore generazione card per topic '" + topic.topicTitle + "':", errCard.message)
+      }
+    }
+
+    if (validCards.length === 0) {
+      console.error("❌ Nessuna card generata dai topic individuati.")
+      return []
+    }
+    
+    // Mescola le opzioni dei quiz per sicurezza
+    for (const c of validCards) {
+      if (c.quiz && c.quiz.options) {
+        c.quiz.options = c.quiz.options.sort(() => Math.random() - 0.5)
+      }
+    }
+
+    const lessonId = "daily-" + dateString
+    const lessonTitle = "Daily Press Review: " + dateString
+
     const moduleDoc = {
-      topic,
+      topic: lessonTitle,
       materia,
       createdAt: new Date(),
       cover: imgLink,
-      essay,
-      levels: reviewed
+      levels: {
+        easy: {
+          levelTitle: lessonTitle,
+          cards: validCards
+        }
+      }
     }
 
     await firestore
@@ -242,97 +181,60 @@ async function generateLearningModule({ topic, materia, lessonId }) {
       .doc(lessonId)
       .set(moduleDoc)
 
-    return moduleDoc.levels
-  } catch (error) {
-    console.error("❌ Errore durante la generazione delle carte:", error)
-    return null
+    console.log("✅ Salvata lezione " + lessonId + " con " + validCards.length + " cards.")
+    
+    return [{ topic: lessonTitle, lessonId, success: true }]
+  } catch (err) {
+    console.error("Errore in generateLessonsFromDailyTopics per " + dateString + ":", err.message)
+    return []
   }
 }
 
-async function createDefaultModules() {
-  const modules = [
-    {
-      topic:
-        "Il caso Sinner e il controllo antidoping: ruolo e limiti del sistema WADA",
-      materia: "Sport Management",
-      lessonId: "sinner-wada-quiz-module"
-    },
-    {
-      topic:
-        "Crisi finanziaria nei club sportivi: analisi dei bilanci e sostenibilità economica",
-      materia: "Sport Management",
-      lessonId: "crisi-finanziaria-club-sportivi"
-    },
-    {
-      topic:
-        "Regolamentazione degli Esport: governance, etica e riconoscimento giuridico",
-      materia: "Sport Management",
-      lessonId: "regolamentazione-esport"
-    },
-    {
-      topic:
-        "Organizzare un evento sportivo internazionale: logistica, stakeholder e impatto",
-      materia: "Sport Management",
-      lessonId: "evento-sportivo-internazionale"
-    },
-    {
-      topic:
-        "Strategie di marketing per club sportivi: branding, digital e fan engagement",
-      materia: "Sport Management",
-      lessonId: "marketing-club-sportivi"
-    },
-    {
-      topic:
-        "Sponsorizzazioni sportive: contratti, attivazioni e ritorno sull’investimento",
-      materia: "Sport Management",
-      lessonId: "sponsorizzazioni-sportive"
-    },
-    {
-      topic:
-        "Sport come strumento di inclusione sociale: progetti, impatti e criticità",
-      materia: "Sport Management",
-      lessonId: "sport-inclusione-sociale"
-    },
-    {
-      topic:
-        "Innovazione negli equipaggiamenti sportivi: materiali, sicurezza e regolamenti",
-      materia: "Sport Management",
-      lessonId: "innovazione-equipaggiamenti-sportivi"
-    },
-    {
-      topic:
-        "Turismo sportivo: eventi, destinazioni e impatto economico locale",
-      materia: "Sport Management",
-      lessonId: "turismo-sportivo"
-    },
-    {
-      topic:
-        "Media e sport: diritti televisivi, storytelling e nuovi formati digitali",
-      materia: "Sport Management",
-      lessonId: "media-e-diritti-sportivi"
-    },
-    {
-      topic: "Fan Experience: tecnologie immersive, community e fidelizzazione",
-      materia: "Sport Management",
-      lessonId: "fan-experience-tecnologie"
-    }
-  ]
 
-  for (const module of modules) {
-    console.log(`\n📘 Generando modulo: ${module.lessonId}`)
-    const result = await generateLearningModule(module)
-    if (result) {
-      console.log(`✅ Modulo "${module.lessonId}" generato con successo!\n`)
-      console.log("Titoli dei livelli:")
-      console.log("- EASY:", result.easy.levelTitle)
-      console.log("- MEDIUM:", result.medium.levelTitle)
-      console.log("- HARD:", result.hard.levelTitle)
-    } else {
-      console.warn(
-        `⚠️ Errore nella generazione del modulo \"${module.lessonId}\"`
-      )
+
+/**
+ * Loops backwards up to 30 days checking and generating missing daily lessons.
+ */
+async function backfillDailyLessons() {
+  const today = new Date();
+  const results = [];
+
+  // Loop backwards 30 days until yesterday
+  for (let i = 30; i >= 1; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dateString = d.toISOString().split("T")[0];
+
+    // Check directly in the learningModules collection to see if lesson (report) exists
+    const lessonDoc = await firestore
+      .collection("learningModules")
+      .doc("Sport Management")
+      .collection("lessons")
+      .doc(`daily-${dateString}`)
+      .get();
+
+    if (lessonDoc.exists) {
+      console.log(`${dateString}: SKIPPED (lesson already generated)`);
+      results.push(`${dateString}: SKIPPED`);
+      continue;
+    }
+
+    try {
+      await generateLessonsFromDailyTopics(dateString);
+      results.push(`${dateString}: OK`);
+    } catch (err) {
+      results.push(`${dateString}: ERROR - ${err.message}`);
     }
   }
+
+  return results;
 }
 
-module.exports = { generateLearningModule, createDefaultModules }
+module.exports = { generateLessonsFromDailyTopics, backfillDailyLessons };
+
+if (require.main === module) {
+  backfillDailyLessons().then(() => {
+    console.log("Daily lessons process completed.");
+    process.exit(0);
+  });
+}

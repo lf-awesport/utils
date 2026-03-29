@@ -18,7 +18,7 @@ const router = express.Router()
  * GET /update
  * Secure endpoint that triggers the web scraper data pipeline.
  * It fetches the newest articles, synthesizes them, and backfills missing daily reports.
- * 
+ *
  * @name Update Pipeline
  * @route {GET} /update
  * @authentication Requires valid x-update-secret header.
@@ -30,33 +30,20 @@ router.get("/update", validateUpdateSecret, async (req, res, next) => {
     await processArticles()
 
     const today = new Date()
-    const results = []
+    const d = new Date(today)
+    d.setDate(today.getDate() - 1)
+    const dateString = d.toISOString().split("T")[0]
 
-    // Phase 2: Backfill historical daily aggregates going back 30 days.
-    for (let i = 30; i >= 2; i--) {
-      const d = new Date(today)
-      d.setDate(today.getDate() - i)
-      const dateString = d.toISOString().split("T")[0]
-
-      // Skip backfilling if the daily summary is already generated.
-      const dailyDoc = await firestore
-        .collection("daily")
-        .doc(`daily-${dateString}`)
-        .get()
-      if (dailyDoc.exists) {
-        results.push(`${dateString}: SKIPPED (already exists)`)
-        continue
-      }
-
-      try {
-        await processDailyArticles(dateString)
-        results.push(`${dateString}: OK`)
-      } catch (err) {
-        results.push(`${dateString}: ERROR - ${err.message}`)
-      }
+    try {
+      await processDailyArticles(dateString)
+    } catch (err) {
+      console.error(
+        `Error processing daily articles for ${dateString}:`,
+        err.message
+      )
     }
-    
-    res.status(200).send(`✅ Update complete!\n${results.join("\n")}`)
+
+    res.status(200).send(`✅ Update complete for ${dateString}!`)
   } catch (error) {
     // Forward unknown errors to the global error handler.
     next(error)
