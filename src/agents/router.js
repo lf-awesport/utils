@@ -1,6 +1,14 @@
+/**
+ * @fileoverview Semantic Router
+ * Determines dynamically if a user query requires external RAG tools based on recent history.
+ * @module router
+ */
 const { gemini } = require("../services/gemini")
 const z = require("zod")
 
+/**
+ * Valid Zod schema constraining the structured router response from the AI.
+ */
 const routerSchema = z.object({
   tools: z
     .array(z.enum(["rag"]))
@@ -34,6 +42,15 @@ CRITERI DI DECISIONE:
 Rispondi in JSON.
 `
 
+/**
+ * Formats user context and asks an embedded LLM classification prompt deciding if RAG matches are needed.
+ * 
+ * @async
+ * @param {Object} args
+ * @param {string} args.query - Live question.
+ * @param {string} [args.history] - Truncated message history string.
+ * @returns {Promise<{tools: Array<string>, reasoning: string}>} Array of tools to run or fallback.
+ */
 async function toolRouter({ query, history }) {
   const content = `
 User Query: ${query}

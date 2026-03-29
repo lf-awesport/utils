@@ -1,3 +1,9 @@
+/**
+ * @fileoverview System and Context Prompts
+ * Defines constant strings and dynamic prompt templates for AI text generation.
+ * Organizes instructions, JSON schemas, and AI agent personalities in one repository.
+ * @module prompts
+ */
 const dailySystemPrompt = `
 Sei un Senior Business Analyst esperto in Sport Business e Media. Il tuo compito è trasformare un insieme di articoli giornalieri in un report strategico per executive e investitori.
 L'analisi deve distillare il valore decisionale dai fatti, mantenendo rigorosamente il formato JSON specificato.

@@ -1,12 +1,24 @@
+/**
+ * @fileoverview Application Configuration
+ * Centralized environment variable management. Parses `.env` variables into typed config objects.
+ * @module config
+ */
 const path = require("path")
 const findConfig = require("find-config")
 const dotenv = require("dotenv")
 
-// Load environment once for the entire backend
+/**
+ * Automatically locate and load the closest .env file climbing up project directories.
+ */
 dotenv.config({
   path: findConfig(".env") || path.resolve(process.cwd(), ".env")
 })
 
+/**
+ * Standardized configuration map decoupling process.env from internal code logics.
+ * Replaces backslash newlines in keys to ensure cryptographic credentials load correctly.
+ * @type {Object}
+ */
 const config = {
   projectId: process.env.PROJECT_ID,
   location: process.env.LOCATION,
@@ -28,6 +40,13 @@ const config = {
   }
 }
 
+/**
+ * Validates the presence of strictly required environment configurations.
+ * 
+ * @param {Array<string>} keys - Array of strings matching key names in process.env.
+ * @param {Function} [errorFactory] - Optional callback to wrap thrown error objects cleanly.
+ * @throws {Error} Terminates application flows if minimum configs are missing.
+ */
 const requireEnv = (keys, errorFactory = (msg) => new Error(msg)) => {
   const missing = keys.filter((key) => !process.env[key])
   if (missing.length > 0) {

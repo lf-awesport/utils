@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Lesson Generation Tools
+ * Contains AI instructions orchestrating educational layout schema formatting matching specific Zod targets.
+ * @module lessonGen
+ */
 const { firestore } = require("../services/firebase")
 const { z } = require("zod")
 const { gemini } = require("../services/gemini")

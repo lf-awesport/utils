@@ -1,9 +1,15 @@
+/**
+ * @fileoverview Google Vertex AI (Gemini) Integration
+ * Sets up external AI SDK connectors initializing Vertex foundations with proper safety headers.
+ * @module geminiService
+ */
 const { createVertex } = require("@ai-sdk/google-vertex")
 const { generateObject, streamText, generateText } = require("ai")
 const { config, requireEnv } = require("../config")
 
 /**
- * Default safety settings for the Gemini model
+ * Baseline strict safety filter parameters protecting generated AI models.
+ * @type {Array<Object>}
  */
 const DEFAULT_SAFETY_SETTINGS = [
   {
@@ -27,7 +33,8 @@ const DEFAULT_SAFETY_SETTINGS = [
 const { AppError } = require("../errors")
 
 /**
- * Error class for Gemini API related errors
+ * Custom error classification specific to LLM API faults or network bounds execution.
+ * @extends AppError 
  */
 class GeminiError extends AppError {
   constructor(message, originalError = null) {
@@ -37,12 +44,8 @@ class GeminiError extends AppError {
 }
 
 /**
- * Validates input parameters for the Gemini function
- * @param {string} content - The input content to process
- * @param {string} prompt - The system prompt to guide the generation
- * @param {number} maxTokens - Maximum number of tokens to generate
- * @param {object} schema - JSON schema for structured output
- * @throws {TypeError} If any parameter is invalid
+ * Hard validity checker verifying function payloads before firing paid logic.
+ * @throws {TypeError}
  */
 function validateInput(content, prompt, maxTokens, schema) {
   if (typeof content !== "string" || content.trim().length === 0) {
@@ -59,6 +62,10 @@ function validateInput(content, prompt, maxTokens, schema) {
   }
 }
 
+/**
+ * Unstructured text equivalent constraint logic.
+ * @throws {TypeError}
+ */
 function validateStreamInput(content, prompt, maxTokens) {
   if (typeof content !== "string" || content.trim().length === 0) {
     throw new TypeError("Content must be a non-empty string")
@@ -74,9 +81,10 @@ function validateStreamInput(content, prompt, maxTokens) {
 let cachedModel = null;
 
 /**
- * Creates and initializes the Gemini model
- * @returns {Object} Initialized Gemini model
- * @throws {GeminiError} If model initialization fails
+ * Connects directly to Google Cloud Vertex APIs using initialized private key parameters parsing options natively.
+ * 
+ * @param {Object} [headers={}] - Custom outgoing HTTP headers (e.g. proxying user credentials).
+ * @returns {Object} Instantiated AI model pointer config ready.
  */
 function getGeminiModel(headers = {}) {
   if (cachedModel && Object.keys(headers).length === 0) {
@@ -118,14 +126,14 @@ function getGeminiModel(headers = {}) {
 }
 
 /**
- * Generates structured output using the Gemini model
- * @param {string} content - The input content to process
- * @param {string} prompt - The system prompt to guide the generation
- * @param {number} maxTokens - Maximum number of tokens to generate
- * @param {object} schema - JSON schema for structured output
- * @returns {Promise<object>} - Generated structured output
- * @throws {GeminiError} If generation fails
- * @throws {TypeError} If parameters are invalid
+ * Fires the @ai-sdk syntax yielding strictly typed JSON response objects strictly verified against input schema blocks.
+ * 
+ * @async
+ * @param {string} content - Raw user conversational text.
+ * @param {string} prompt - Static system configuration behavior.
+ * @param {number} maxTokens - Max outbound limits avoiding arbitrary generation costs.
+ * @param {Object} schema - Required format definitions Zod object outputs mapped explicitly.
+ * @returns {Promise<Object>}
  */
 async function gemini(content, prompt, maxTokens, schema) {
   validateInput(content, prompt, maxTokens, schema)

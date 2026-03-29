@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Semantic Embedding Service
+ * Interacts with Vertex AI providing text embedding models computing high-dimensional vectors for similarity searches.
+ * @module embeddings
+ */
 const { embed } = require("ai")
 const { createVertex } = require("@ai-sdk/google-vertex")
 const { config, requireEnv } = require("../config")

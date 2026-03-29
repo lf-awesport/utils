@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Application Error Formatting
+ * Provides standardized AppError class unifying HTTP status codes and payloads.
+ * @module errors
+ */
+
+/**
+ * Standardizes errors allowing properties such as status and codes
+ * that are automatically routed and handled properly in middlewares.
+ * @extends Error
+ */
 class AppError extends Error {
   constructor(message, { status = 500, code = "INTERNAL_ERROR", details = null } = {}) {
     super(message)
@@ -32,6 +43,11 @@ class AppError extends Error {
   }
 }
 
+/**
+ * Checker determining if errors were properly thrown using the standard.
+ * @param {Error} err - Raw error to inspect.
+ * @returns {boolean}
+ */
 const isAppError = (err) => err && err.name === "AppError"
 
 module.exports = {

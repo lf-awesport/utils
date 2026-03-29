@@ -1,5 +1,16 @@
+/**
+ * @fileoverview Duplication Cleanup Utility
+ * Command line script ensuring Firestore indexes don't bloat with repeated articles or URL scrapes.
+ * @module removeDuplicates
+ */
 const { firestore } = require("../services/firebase")
 
+/**
+ * Searches posts/sentiment records matching identical 'url' or 'title' fields and deletes extras iteratively.
+ * @async
+ * @param {Object} options - Action parameters.
+ * @param {boolean} [options.dryRun=true] - Defaults logging IDs safely, toggle false to execute batches.
+ */
 async function removeDuplicateUrls({ dryRun = true } = {}) {
   const collections = ["posts", "sentiment"]
 
@@ -57,4 +68,5 @@ async function removeDuplicateUrls({ dryRun = true } = {}) {
   )
 }
 
+// Executes script standalone config.
 removeDuplicateUrls({ dryRun: false })

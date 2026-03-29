@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Retrieval-Augmented Generation Logic
+ * Responsible for interfacing Firestore dense embeddings, vector searching contexts, and piping to Google Reranking algorithms.
+ * @module queryRAG
+ */
 const { firestore } = require("../services/firebase") // Firebase/Firestore client (@google-cloud/firestore)
 const { generateEmbedding } = require("./embeddings")
 const { rerankDocuments } = require("./reranker")

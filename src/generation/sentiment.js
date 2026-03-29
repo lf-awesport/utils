@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Sentiment Analysis Pipelines
+ * Connects articles to natural language processing streams yielding metadata and aggregated data reports.
+ * @module sentimentAnalysis
+ */
 const { FieldValue } = require("@google-cloud/firestore")
 const { firestore } = require("../services/firebase.js")
 const { jsonSchema } = require("ai")

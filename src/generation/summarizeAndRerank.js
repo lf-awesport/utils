@@ -1,7 +1,8 @@
-// src/utils/summarizeAndRerank.js
-// Gestisce il batch processing per generare il campo 'rerank_summary'
-// usando Gemini e aggiornando Firestore con paginazione basata sul cursore.
-
+/**
+ * @fileoverview Article Summarization and Re-Rank Support
+ * Batch scripts parsing articles and compressing content recursively via LLM for subsequent vectorization.
+ * @module summarizeRerank
+ */
 const { firestore } = require("../services/firebase")
 const { gemini, geminiText } = require("../services/gemini")
 

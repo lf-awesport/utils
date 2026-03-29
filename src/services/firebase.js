@@ -1,10 +1,16 @@
+/**
+ * @fileoverview Firebase Integration Service
+ * Manages Google Cloud Firestore initialization and authentication config.
+ * @module firebaseService
+ */
 const { Firestore } = require("@google-cloud/firestore")
 const { config, requireEnv } = require("../config")
 
 const { AppError } = require("../errors")
 
 /**
- * Custom error class for Firebase-related errors
+ * Custom error wrapper for Firestore specific failures.
+ * @extends AppError
  */
 class FirebaseError extends AppError {
   constructor(message, originalError = null) {
@@ -14,8 +20,8 @@ class FirebaseError extends AppError {
 }
 
 /**
- * Validates the environment configuration
- * @throws {FirebaseError} If required environment variables are missing
+ * Validates the environment configuration matches required GCP standards.
+ * @throws {FirebaseError} If expected environment variables are missing.
  */
 function validateConfig() {
   requireEnv(
@@ -25,9 +31,9 @@ function validateConfig() {
 }
 
 /**
- * Creates and initializes the Firestore client
- * @returns {Firestore} Initialized Firestore client
- * @throws {FirebaseError} If initialization fails
+ * Instantiates the actual Firestore client using environment keys.
+ * @returns {Firestore} Initialized database interface.
+ * @throws {FirebaseError} Under configuration exceptions.
  */
 function createFirestoreClient() {
   try {
@@ -35,9 +41,6 @@ function createFirestoreClient() {
     return new Firestore({
       projectId: config.firebase.projectId,
       credentials: {
-        //CREATE SERVICE ACCOUNT WITH PERMISSIONS: Cloud Datastore Owner
-        // Firebase Admin SDK Administrator Service Agent
-        // Service Account Token Creator
         client_email: config.firebase.clientEmail,
         private_key: config.firebase.privateKey
       }
@@ -50,12 +53,12 @@ function createFirestoreClient() {
   }
 }
 
-// Lazy initialization of the client
+// Global cached client instance for lazy initialization.
 let firestoreClient = null
 
 /**
- * Gets or creates the Firestore client
- * @returns {Firestore} The Firestore client
+ * Retrieves the cached or newly configured Firestore database object.
+ * @returns {Firestore}
  */
 function getFirestoreClient() {
   if (!firestoreClient) {
@@ -65,17 +68,16 @@ function getFirestoreClient() {
 }
 
 /**
- * Resets the Firestore client (for testing purposes)
+ * Disconnects and resets internal client state (primarily for test setups).
  */
 function _resetFirestoreClient() {
   firestoreClient = null
 }
 
-// Export a getter for the firestore client
+// Surface firestore property as a dynamic getter resolving connections just-in-time.
 Object.defineProperty(module.exports, "firestore", {
   get: () => getFirestoreClient()
 })
 
-// Export other functions and classes
 module.exports.FirebaseError = FirebaseError
 module.exports._resetFirestoreClient = _resetFirestoreClient

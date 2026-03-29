@@ -1,4 +1,8 @@
-// src/utils/reranker.js
+/**
+ * @fileoverview Discovery Engine Re-Ranker
+ * Hits Google Cloud Vertex APIs using specialized semantic-ranker rules sorting vector documents by actual context intent.
+ * @module reranker
+ */
 const axios = require("axios")
 const { GoogleAuth } = require("google-auth-library")
 const { config } = require("../config")
