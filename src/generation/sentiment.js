@@ -38,7 +38,11 @@ const { AppError } = require("../errors")
  */
 class SentimentError extends AppError {
   constructor(message, originalError = null) {
-    super(message, { status: 500, code: "GENERATION_ERROR", details: originalError })
+    super(message, {
+      status: 500,
+      code: "GENERATION_ERROR",
+      details: originalError
+    })
     this.name = "SentimentError"
   }
 }
@@ -290,79 +294,9 @@ async function processArticles() {
   }
 }
 
-/**
- * Concatena tutti i post di una data in un unico articolo e processa con sentiment analysis
- * @param {string|Date} date - Data in formato 'YYYY-MM-DD' o oggetto Date
- * @returns {Promise<Object>} Analisi del "mega-articolo" giornaliero
- */
-async function processDailyArticles(date) {
-  // Query Firestore per tutti i post di quella data
-  const postsSnap = await firestore
-    .collection("sentiment")
-    .where("date", "==", date)
-    .get()
-
-  if (postsSnap.empty) {
-    throw new SentimentError(`Nessun post trovato per la data ${date}`)
-  }
-
-  // Concatena i dati dei post in un unico "mega-articolo"
-  let megaBody = ""
-  let titles = []
-  let authors = new Set()
-  let tags = new Set()
-  let excerpts = []
-  let urls = []
-  let allPosts = []
-  postsSnap.forEach((doc) => {
-    const data = doc.data()
-    allPosts.push(data)
-    if (data.body) megaBody += "\n---\n" + (data.rerank_summary || data.body)
-    if (data.title) titles.push(data.title)
-    if (data.author) authors.add(data.author)
-    if (Array.isArray(data.tags)) data.tags.forEach((t) => tags.add(t))
-    if (data.excerpt) excerpts.push(data.excerpt)
-    if (data.url) urls.push(data.url)
-  })
-
-  // Crea un oggetto "post" fittizio per processArticle
-  const fakePost = {
-    id: date,
-    data: () => ({
-      title: `Report del ${date}`,
-      author: Array.from(authors).join(", "),
-      date: date,
-      tags: Array.from(tags),
-      excerpt: excerpts.join(" | "),
-      url: urls.join(" | "),
-      body: megaBody,
-      allPosts
-    })
-  }
-
-  // Usa la stessa pipeline di processArticle
-  const result = await processArticle(fakePost, "daily")
-
-  // Salva il risultato nella collezione "daily"
-  await firestore
-    .collection("daily")
-    .doc(date)
-    .set(
-      {
-        ...result,
-        imgLink: null,
-        createdAt: new Date()
-      },
-      { merge: true }
-    )
-
-  return result
-}
-
 module.exports = {
   processArticles,
   SentimentError,
   DEFAULT_CONFIG, // Exported for testing
-  SENTIMENT_SCHEMA, // Exported for testing
-  processDailyArticles
+  SENTIMENT_SCHEMA // Exported for testing
 }

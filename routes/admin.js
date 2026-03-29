@@ -5,10 +5,8 @@
  */
 const express = require("express")
 const { runAllScrapers } = require("../src/scrapers/scraper.js")
-const {
-  processArticles,
-  processDailyArticles
-} = require("../src/generation/sentiment.js")
+const { processArticles } = require("../src/generation/sentiment.js")
+const { backfillDailyLessons } = require("../src/generation/lesson.js")
 const { firestore } = require("../src/services/firebase.js")
 const { validateUpdateSecret } = require("../middleware/auth.js")
 
@@ -26,24 +24,11 @@ const router = express.Router()
 router.get("/update", validateUpdateSecret, async (req, res, next) => {
   try {
     // Phase 1: Collect new raw data and initiate processing.
+    console.log("here")
     await runAllScrapers()
     await processArticles()
-
-    const today = new Date()
-    const d = new Date(today)
-    d.setDate(today.getDate() - 1)
-    const dateString = d.toISOString().split("T")[0]
-
-    try {
-      await processDailyArticles(dateString)
-    } catch (err) {
-      console.error(
-        `Error processing daily articles for ${dateString}:`,
-        err.message
-      )
-    }
-
-    res.status(200).send(`✅ Update complete for ${dateString}!`)
+    await backfillDailyLessons()
+    res.status(200).send(`✅ Update complete`)
   } catch (error) {
     // Forward unknown errors to the global error handler.
     next(error)

@@ -10,8 +10,12 @@ const { gemini } = require("../services/gemini")
 const clusterZod = z.object({
   topics: z.array(
     z.object({
-      topicTitle: z.string().describe("Il titolo del macro-argomento di Sport Business"),
-      articleIndices: z.array(z.number()).describe("Gli indici degli articoli pertinenti a questo argomento")
+      topicTitle: z
+        .string()
+        .describe("Il titolo del macro-argomento di Sport Business"),
+      articleIndices: z
+        .array(z.number())
+        .describe("Gli indici degli articoli pertinenti a questo argomento")
     })
   )
 })
@@ -65,7 +69,7 @@ Restituisci un **oggetto JSON**:
 /**
  * Generates a single Daily Press Review lesson from the day's articles.
  * Multi-step RAG: Groups articles into topics, then generates one card per topic.
- * 
+ *
  * @async
  * @param {string} dateString - Date to scan for raw imported articles format YYYY-MM-DD.
  * @returns {Promise<Array>} List containing the single generated module description (or empty array).
@@ -73,7 +77,9 @@ Restituisci un **oggetto JSON**:
 async function generateLessonsFromDailyTopics(dateString) {
   try {
     const materia = "Sport Management"
-    console.log("🔍 Ricerca articoli per la Daily Press Review del " + dateString + "...")
+    console.log(
+      "🔍 Ricerca articoli per la Daily Press Review del " + dateString + "..."
+    )
     const postsSnap = await firestore
       .collection("sentiment")
       .where("date", "==", dateString)
@@ -86,7 +92,7 @@ async function generateLessonsFromDailyTopics(dateString) {
 
     const articles = []
     let imgLink = null
-    postsSnap.forEach(doc => {
+    postsSnap.forEach((doc) => {
       const data = doc.data()
       articles.push(data)
       if (!imgLink && data.imgLink) imgLink = data.imgLink
@@ -95,13 +101,22 @@ async function generateLessonsFromDailyTopics(dateString) {
     // 1. Costruiamo il riassunto breve delle notizie per il clustering
     let summaryText = ""
     articles.forEach((art, index) => {
-      // Usiamo una slice ancora più corta per limitare i token (evita "Failed to generate response")
-      const snippet = art.excerpt || (art.analysis?.cleanText ? art.analysis.cleanText.slice(0, 100) : "")
-      summaryText += "\n[" + index + "] Titolo: " + art.title + "\nEstratto: " + snippet + "...\n"
+      // Usiamo una slice corta per limitare i token
+      const snippet =
+        art.excerpt ||
+        (art.analysis?.cleanText ? art.analysis.cleanText.slice(0, 200) : "")
+      summaryText +=
+        "\n[" +
+        index +
+        "] Titolo: " +
+        art.title +
+        "\nEstratto: " +
+        snippet +
+        "...\n"
     })
 
     console.log("📘 Estraggo i topic da " + articles.length + " articoli...")
-    
+
     const clusteringResult = await gemini(
       "Raggruppa le notizie pertinenti in base al testo fornito nel prompt",
       clusterPrompt(dateString, summaryText),
@@ -109,7 +124,11 @@ async function generateLessonsFromDailyTopics(dateString) {
       clusterZod
     )
 
-    if (!clusteringResult || !clusteringResult.topics || clusteringResult.topics.length === 0) {
+    if (
+      !clusteringResult ||
+      !clusteringResult.topics ||
+      clusteringResult.topics.length === 0
+    ) {
       console.warn("❌ Nessun topic valido di business trovato nel clustering.")
       return []
     }
@@ -124,13 +143,25 @@ async function generateLessonsFromDailyTopics(dateString) {
       let specificContext = ""
       for (const idx of topic.articleIndices) {
         if (articles[idx]) {
-          const contentText = articles[idx].analysis?.cleanText || articles[idx].excerpt
-          specificContext += "\n--- ARTICOLO FONTE ---\nTitolo: " + articles[idx].title + "\nTesto: " + contentText + "\n"
+          const contentText =
+            articles[idx].analysis?.cleanText || articles[idx].excerpt
+          specificContext +=
+            "\n--- ARTICOLO FONTE ---\nTitolo: " +
+            articles[idx].title +
+            "\nTesto: " +
+            contentText +
+            "\n"
         }
       }
 
-      console.log("📝 Genero card per topic: '" + topic.topicTitle + "' (" + topic.articleIndices.length + " articoli fonte)...")
-      
+      console.log(
+        "📝 Genero card per topic: '" +
+          topic.topicTitle +
+          "' (" +
+          topic.articleIndices.length +
+          " articoli fonte)..."
+      )
+
       try {
         const cardResult = await gemini(
           "Genera la card di approfondimento",
@@ -142,7 +173,10 @@ async function generateLessonsFromDailyTopics(dateString) {
           validCards.push(cardResult)
         }
       } catch (errCard) {
-        console.error("Errore generazione card per topic '" + topic.topicTitle + "':", errCard.message)
+        console.error(
+          "Errore generazione card per topic '" + topic.topicTitle + "':",
+          errCard.message
+        )
       }
     }
 
@@ -150,7 +184,7 @@ async function generateLessonsFromDailyTopics(dateString) {
       console.error("❌ Nessuna card generata dai topic individuati.")
       return []
     }
-    
+
     // Mescola le opzioni dei quiz per sicurezza
     for (const c of validCards) {
       if (c.quiz && c.quiz.options) {
@@ -181,29 +215,32 @@ async function generateLessonsFromDailyTopics(dateString) {
       .doc(lessonId)
       .set(moduleDoc)
 
-    console.log("✅ Salvata lezione " + lessonId + " con " + validCards.length + " cards.")
-    
+    console.log(
+      "✅ Salvata lezione " + lessonId + " con " + validCards.length + " cards."
+    )
+
     return [{ topic: lessonTitle, lessonId, success: true }]
   } catch (err) {
-    console.error("Errore in generateLessonsFromDailyTopics per " + dateString + ":", err.message)
+    console.error(
+      "Errore in generateLessonsFromDailyTopics per " + dateString + ":",
+      err.message
+    )
     return []
   }
 }
-
-
 
 /**
  * Loops backwards up to 30 days checking and generating missing daily lessons.
  */
 async function backfillDailyLessons() {
-  const today = new Date();
-  const results = [];
+  const today = new Date()
+  const results = []
 
   // Loop backwards 30 days until yesterday
   for (let i = 30; i >= 1; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const dateString = d.toISOString().split("T")[0];
+    const d = new Date(today)
+    d.setDate(today.getDate() - i)
+    const dateString = d.toISOString().split("T")[0]
 
     // Check directly in the learningModules collection to see if lesson (report) exists
     const lessonDoc = await firestore
@@ -211,30 +248,30 @@ async function backfillDailyLessons() {
       .doc("Sport Management")
       .collection("lessons")
       .doc(`daily-${dateString}`)
-      .get();
+      .get()
 
     if (lessonDoc.exists) {
-      console.log(`${dateString}: SKIPPED (lesson already generated)`);
-      results.push(`${dateString}: SKIPPED`);
-      continue;
+      console.log(`${dateString}: SKIPPED (lesson already generated)`)
+      results.push(`${dateString}: SKIPPED`)
+      continue
     }
 
     try {
-      await generateLessonsFromDailyTopics(dateString);
-      results.push(`${dateString}: OK`);
+      await generateLessonsFromDailyTopics(dateString)
+      results.push(`${dateString}: OK`)
     } catch (err) {
-      results.push(`${dateString}: ERROR - ${err.message}`);
+      results.push(`${dateString}: ERROR - ${err.message}`)
     }
   }
 
-  return results;
+  return results
 }
 
-module.exports = { generateLessonsFromDailyTopics, backfillDailyLessons };
+module.exports = { generateLessonsFromDailyTopics, backfillDailyLessons }
 
 if (require.main === module) {
   backfillDailyLessons().then(() => {
-    console.log("Daily lessons process completed.");
-    process.exit(0);
-  });
+    console.log("Daily lessons process completed.")
+    process.exit(0)
+  })
 }
